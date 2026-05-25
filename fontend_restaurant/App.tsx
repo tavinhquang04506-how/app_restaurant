@@ -74,8 +74,6 @@ const STAFF_MENU: MenuItemGroup[] = [
     groupName: 'Công việc hàng ngày',
     items: [
       { name: 'Danh sách booking', icon: 'clipboard' },
-      { name: 'Món ăn chi nhánh', icon: 'briefcase' },
-      { name: 'Chat', icon: 'message' },
     ],
   },
 ];

@@ -127,6 +127,7 @@ export default function HomeScreen() {
   const [selectedPromoDetail, setSelectedPromoDetail] = useState<PromotionModel | null>(null);
   const [selectedBranchDetail, setSelectedBranchDetail] = useState<BranchModel | null>(null);
   const [savedPromoCodes, setSavedPromoCodes] = useState<string[]>([]);
+  const [promoImageErrors, setPromoImageErrors] = useState<string[]>([]);
   
   // Extra states
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -348,8 +349,19 @@ export default function HomeScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
               {promotions.map((promo) => (
                 <TouchableOpacity key={promo.id} style={[styles.promoCard, { backgroundColor: colors.card }]} onPress={() => setSelectedPromoDetail(promo)}>
-                  {promo.displayImageUrl && (
-                    <Image source={{ uri: promo.displayImageUrl }} style={styles.promoImage} resizeMode="cover" />
+                  {promo.displayImageUrl && !promoImageErrors.includes(promo.id) ? (
+                    <Image
+                      source={{ uri: promo.displayImageUrl }}
+                      style={styles.promoImage}
+                      resizeMode="cover"
+                      onError={() => {
+                        setPromoImageErrors((prev) => [...prev, promo.id]);
+                      }}
+                    />
+                  ) : (
+                    <View style={[styles.promoImage, { backgroundColor: isDarkMode ? '#2C2C2E' : '#FCE4EC', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Ionicons name="gift" size={40} color={colors.primary} />
+                    </View>
                   )}
                   <View style={styles.promoContent}>
                     <Text style={[styles.promoName, { color: colors.text }]} numberOfLines={1}>{translateDbText(promo.name)}</Text>
@@ -469,8 +481,15 @@ export default function HomeScreen() {
 
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
                 {/* Large Promo Image */}
-                {selectedPromoDetail.displayImageUrl ? (
-                  <Image source={{ uri: selectedPromoDetail.displayImageUrl }} style={styles.promoDetailImage} resizeMode="cover" />
+                 {selectedPromoDetail.displayImageUrl && !promoImageErrors.includes(selectedPromoDetail.id) ? (
+                  <Image
+                    source={{ uri: selectedPromoDetail.displayImageUrl }}
+                    style={styles.promoDetailImage}
+                    resizeMode="cover"
+                    onError={() => {
+                      setPromoImageErrors((prev) => [...prev, selectedPromoDetail.id]);
+                    }}
+                  />
                 ) : (
                   <View style={[styles.promoDetailPlaceholder, { backgroundColor: isDarkMode ? '#2C2C2E' : '#FCE4EC' }]}>
                     <Ionicons name="gift-outline" size={64} color={colors.primary} />

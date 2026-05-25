@@ -9,103 +9,15 @@ import Badge from '../../components/ui/Badge';
 import { restaurantApi } from '../../services/restaurantApi';
 import type {
   Branch,
-  BranchFood,
   BookingRequestPayload,
   TableAvailability,
+  Booking,
 } from '../../types/types';
 import { useToast } from '../../context/ToastContext';
 import { formatTableCode } from '../../utils/tableUtils';
 import { useAuth } from '../../context/AuthContext';
 
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-});
-
 const DEFAULT_DURATION_MINUTES = 105;
-
-const generateRowId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()}`;
-
-type DishRow = {
-  id: string;
-  foodId: string;
-  quantity: number;
-  note: string;
-};
-
-// Beautiful Interactive SVG Seat Layout component representing the actual dining table
-const VisualTable: React.FC<{ capacity: number; vip: boolean; booked: boolean }> = ({ capacity, vip, booked }) => {
-  const chairColor = booked
-    ? 'fill-rose-400/90'
-    : vip
-    ? 'fill-amber-500/80 group-hover:fill-amber-500 group-hover:scale-110 transition-all duration-300'
-    : 'fill-indigo-500/80 group-hover:fill-indigo-500 group-hover:scale-110 transition-all duration-300';
-    
-  const tableColor = booked
-    ? 'fill-rose-100/80 stroke-rose-300/80'
-    : vip
-    ? 'fill-amber-50/50 stroke-amber-300/80 group-hover:fill-amber-100/30 group-hover:stroke-amber-400 transition-colors duration-300'
-    : 'fill-slate-50/80 stroke-slate-200 group-hover:fill-indigo-50/30 group-hover:stroke-indigo-300 transition-colors duration-300';
-
-  return (
-    <div className="flex items-center justify-center py-3 h-16 w-full">
-      <svg width="100" height="50" viewBox="0 0 100 50" className="w-24 h-12 overflow-visible">
-        {/* Central Dining Table */}
-        <rect
-          x="26"
-          y="11"
-          width="48"
-          height="28"
-          rx="8"
-          className={`${tableColor} stroke-2 transition-all duration-300`}
-        />
-        
-        {/* Chairs arrangement matching actual capacity */}
-        {capacity <= 2 ? (
-          <>
-            {/* 2 chairs: Left & Right */}
-            <circle cx="16" cy="25" r="4.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="84" cy="25" r="4.5" className={`${chairColor} transition-all duration-300`} />
-          </>
-        ) : capacity <= 4 ? (
-          <>
-            {/* 4 chairs: 2 Top & 2 Bottom */}
-            <circle cx="40" cy="4" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="60" cy="4" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="40" cy="46" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="60" cy="46" r="4" className={`${chairColor} transition-all duration-300`} />
-          </>
-        ) : capacity <= 6 ? (
-          <>
-            {/* 6 chairs: Left, Right & 2 pairs Top/Bottom */}
-            <circle cx="16" cy="25" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="84" cy="25" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="38" cy="4" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="62" cy="4" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="38" cy="46" r="4" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="62" cy="46" r="4" className={`${chairColor} transition-all duration-300`} />
-          </>
-        ) : (
-          <>
-            {/* 8 chairs: Left, Right & 3 pairs Top/Bottom */}
-            <circle cx="15" cy="25" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="85" cy="25" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="33" cy="4" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="50" cy="4" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="67" cy="4" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="33" cy="46" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="50" cy="46" r="3.5" className={`${chairColor} transition-all duration-300`} />
-            <circle cx="67" cy="46" r="3.5" className={`${chairColor} transition-all duration-300`} />
-          </>
-        )}
-      </svg>
-    </div>
-  );
-};
 
 const BookingPage: React.FC = () => {
   const { user } = useAuth();
@@ -116,6 +28,7 @@ const BookingPage: React.FC = () => {
   const [selectedBranch, setSelectedBranch] = useState<string>(managedBranchId);
   const [capacityFilter, setCapacityFilter] = useState('');
   const [tables, setTables] = useState<TableAvailability[]>([]);
+  const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
@@ -123,15 +36,13 @@ const BookingPage: React.FC = () => {
   
   const getMinBookingTime = () => {
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-    const minTimeMs = Date.now() + 60 * 60 * 1000; // current time + 1 hour
+    const minTimeMs = Date.now(); // current time
     return new Date(minTimeMs - tzoffset).toISOString().slice(0, 16);
   };
 
   const [bookingTime, setBookingTime] = useState(getMinBookingTime);
   const [guests, setGuests] = useState(4);
   const [specialRequest, setSpecialRequest] = useState('');
-  const [branchFoods, setBranchFoods] = useState<BranchFood[]>([]);
-  const [dishRows, setDishRows] = useState<DishRow[]>([]);
 
   const { showToast } = useToast();
 
@@ -165,7 +76,13 @@ const BookingPage: React.FC = () => {
           start,
           durationMinutes: DEFAULT_DURATION_MINUTES,
         });
+        
+        // Also fetch today's bookings for live status overlay
+        const todayStr = new Date().toISOString().split('T')[0];
+        const allBookings = await restaurantApi.getBookings({ branchId: selectedBranch, date: todayStr }).catch(() => []);
+        
         setTables(availability);
+        setTodayBookings(allBookings);
       } catch (err) {
         setError('Không thể tải trạng thái bàn');
         showToast('Không thể tải trạng thái bàn', 'error');
@@ -175,24 +92,6 @@ const BookingPage: React.FC = () => {
     };
     fetchAvailability();
   }, [bookingTime, selectedBranch, showToast]);
-
-  useEffect(() => {
-    if (!selectedBranch) return;
-    const fetchBranchFoods = async () => {
-      try {
-        const data = await restaurantApi.getBranchFoods({
-          branchId: selectedBranch,
-          page: 1,
-          size: 50,
-        });
-        setBranchFoods(data.result);
-      } catch {
-        showToast('Không thể tải menu của chi nhánh', 'error');
-      }
-    };
-    fetchBranchFoods();
-    setDishRows([]);
-  }, [selectedBranch, showToast]);
 
   const filteredTables = useMemo(() => {
     if (!capacityFilter) return tables;
@@ -209,50 +108,10 @@ const BookingPage: React.FC = () => {
     return filteredTables.filter((table) => !table.tableCode.toLowerCase().includes('vip'));
   }, [filteredTables]);
 
-  const dishOptions = useMemo(
-    () =>
-      branchFoods
-        .filter((item) => item.active)
-        .map((item) => ({
-          value: item.food.id,
-          label: `${item.food.name} (${currencyFormatter.format(item.price)})`,
-        })),
-    [branchFoods]
-  );
-
   const openBookingModal = (table: TableAvailability) => {
     setSelectedTable(table);
     setGuests(Math.min(table.capacity, guests));
     setBookingModalOpen(true);
-  };
-
-  const addDishRow = () => {
-    setDishRows((prev) => [
-      ...prev,
-      {
-        id: generateRowId(),
-        foodId: branchFoods[0]?.food.id ?? '',
-        quantity: 1,
-        note: '',
-      },
-    ]);
-  };
-
-  const updateDishRow = (id: string, field: keyof DishRow, value: string | number) => {
-    setDishRows((prev) =>
-      prev.map((row) =>
-        row.id === id
-          ? {
-              ...row,
-              [field]: field === 'quantity' ? Number(value) : value,
-            }
-          : row
-      )
-    );
-  };
-
-  const removeDishRow = (id: string) => {
-    setDishRows((prev) => prev.filter((row) => row.id !== id));
   };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
@@ -261,15 +120,6 @@ const BookingPage: React.FC = () => {
       showToast('Thiếu thông tin bàn', 'error');
       return;
     }
-    const dishesPayload =
-      dishRows
-        .filter((row) => row.foodId && row.quantity > 0)
-        .map((row, index) => ({
-          foodId: row.foodId,
-          quantity: row.quantity,
-          servingOrder: index + 1,
-          specialNote: row.note || undefined,
-        })) || [];
 
     const payload: BookingRequestPayload = {
       bookingTime: new Date(bookingTime).toISOString(),
@@ -278,14 +128,12 @@ const BookingPage: React.FC = () => {
       specialRequest,
       tableId: selectedTable.tableId,
       branchId: selectedBranch,
-      dishes: dishesPayload.length ? dishesPayload : undefined,
     };
     try {
       await restaurantApi.createBooking(payload);
       showToast(`Đặt bàn ${selectedTable.tableCode} thành công`, 'success');
       setBookingModalOpen(false);
       setSpecialRequest('');
-      setDishRows([]);
       setSelectedTable(null);
       const start = new Date(bookingTime).toISOString();
       const availability = await restaurantApi.getTableAvailability({
@@ -303,7 +151,7 @@ const BookingPage: React.FC = () => {
 
   const minBookingTimeStr = useMemo(() => {
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-    const minTimeMs = Date.now() + 60 * 60 * 1000;
+    const minTimeMs = Date.now();
     return new Date(minTimeMs - tzoffset).toISOString().slice(0, 16);
   }, [bookingTime]);
 
@@ -311,37 +159,60 @@ const BookingPage: React.FC = () => {
     const isVip = table.tableCode.toLowerCase().includes('vip');
     const displayTitle = formatTableCode(table.tableCode, 'vi', true);
 
+    // Calculate real-time status from todayBookings
+    const now = new Date();
+    const tableBookings = todayBookings.filter(b => b.table?.id === table.tableId && b.status !== 'CANCELLED' && b.status !== 'COMPLETED');
+    
+    let currentBooking = null;
+    let upcomingBooking = null;
+    
+    tableBookings.forEach(b => {
+      const from = new Date(b.reservedFrom);
+      const to = new Date(b.reservedTo);
+      if (b.status === 'CHECKED_IN' || (from <= now && to >= now)) {
+        currentBooking = b;
+      } else if (from > now) {
+        if (!upcomingBooking || from < new Date(upcomingBooking.reservedFrom)) {
+          upcomingBooking = b;
+        }
+      }
+    });
+
+    const isCurrentlyUsed = currentBooking !== null;
+    const isBookedForSelectedTime = table.booked; // API availability for the chosen time slot
+    const disabled = isBookedForSelectedTime || isCurrentlyUsed; // Cannot book if someone is sitting there NOW or at the selected time
+
     return (
       <button
         key={table.tableId}
-        disabled={table.booked}
+        disabled={disabled}
         onClick={() => openBookingModal(table)}
-        className={`group rounded-2xl p-5 text-left border flex flex-col justify-between transition-all duration-300 relative overflow-hidden h-[210px] w-full ${
-          table.booked
-            ? 'bg-gradient-to-b from-rose-50/90 to-rose-100/40 border-rose-200/80 text-rose-950 cursor-not-allowed shadow-sm opacity-90'
+        className={`group rounded-xl p-4 text-left border flex flex-col justify-between transition-all duration-300 relative overflow-hidden h-[120px] w-full ${
+          disabled
+            ? 'bg-rose-50/70 border-rose-200/80 text-rose-950 cursor-not-allowed shadow-sm opacity-90'
             : isVip
-            ? 'bg-gradient-to-b from-amber-50/40 via-white to-white border-amber-200/70 hover:border-amber-400 hover:shadow-[0_8px_25px_rgba(245,158,11,0.12)] text-slate-800 hover:-translate-y-1'
-            : 'bg-gradient-to-b from-slate-50/60 via-white to-white border-slate-200/70 hover:border-indigo-400 hover:shadow-[0_8px_25px_rgba(99,102,241,0.1)] text-slate-800 hover:-translate-y-1'
+            ? 'bg-gradient-to-b from-amber-50/30 via-white to-white border-amber-200/70 hover:border-amber-400 hover:shadow-[0_8px_25px_rgba(245,158,11,0.08)] text-slate-800 hover:-translate-y-0.5'
+            : 'bg-gradient-to-b from-slate-50/40 via-white to-white border-slate-200/70 hover:border-indigo-400 hover:shadow-[0_8px_25px_rgba(99,102,241,0.06)] text-slate-800 hover:-translate-y-0.5'
         }`}
       >
         {/* Accent indicator bar on top of card */}
-        {!table.booked && isVip && (
-          <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-amber-400 to-amber-500"></div>
+        {!disabled && isVip && (
+          <div className="absolute top-0 inset-x-0 h-[3px] bg-amber-400"></div>
         )}
-        {!table.booked && !isVip && (
-          <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-indigo-400 to-violet-500"></div>
+        {!disabled && !isVip && (
+          <div className="absolute top-0 inset-x-0 h-[3px] bg-indigo-400"></div>
         )}
-        {table.booked && (
-          <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-rose-400 to-rose-500"></div>
+        {disabled && (
+          <div className="absolute top-0 inset-x-0 h-[3px] bg-rose-400"></div>
         )}
 
         <div className="w-full">
           {/* Card Header: Title & Tag */}
-          <div className="flex justify-between items-start gap-1 mb-2">
+          <div className="flex justify-between items-start gap-1">
             <div>
               <p
-                className={`text-base font-extrabold tracking-tight transition-colors duration-300 ${
-                  table.booked
+                className={`text-sm font-extrabold tracking-tight transition-colors duration-300 ${
+                  disabled
                     ? 'text-rose-900'
                     : isVip
                     ? 'text-amber-800 group-hover:text-amber-600'
@@ -352,49 +223,61 @@ const BookingPage: React.FC = () => {
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span
-                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                    table.booked
+                  className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                    disabled
                       ? 'bg-rose-200/60 text-rose-800'
                       : isVip
                       ? 'bg-amber-100 text-amber-800 border border-amber-200/40'
                       : 'bg-indigo-50 text-indigo-700 border border-indigo-100/60'
                   }`}
                 >
-                  {isVip ? 'Hạng VIP' : 'Bàn Thường'}
+                  {isVip ? 'VIP' : 'Thường'}
                 </span>
                 <span className="text-[10px] text-gray-500 font-semibold">{table.capacity} chỗ</span>
               </div>
             </div>
-            {isVip && !table.booked && (
-              <span className="text-amber-500 text-lg select-none">👑</span>
+            {isVip && !disabled && (
+              <span className="text-amber-500 text-sm select-none">👑</span>
             )}
-            {table.booked && (
-              <span className="text-rose-500 text-sm select-none">🔒</span>
+            {disabled && (
+              <span className="text-rose-500 text-xs select-none">🔒</span>
             )}
           </div>
-
-          {/* Table Seat Layout Visualizer */}
-          <VisualTable capacity={table.capacity} vip={isVip} booked={table.booked} />
         </div>
 
         {/* Card Footer: Live Status */}
         <div className="w-full border-t border-dashed mt-2 pt-2 flex items-center justify-between">
-          {table.booked ? (
-            <div className="w-full">
-              <span className="text-[10px] font-bold text-rose-700 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping"></span>
-                ĐÃ ĐẶT CHỖ
+          {isCurrentlyUsed ? (
+            <div className="w-full flex items-center justify-between">
+              <span className="text-[9px] font-bold text-rose-700 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>
+                ĐANG SỬ DỤNG
               </span>
-              {table.reservedFrom && table.reservedTo && (
-                <p className="text-[9px] text-rose-600 font-semibold mt-0.5 bg-rose-200/30 px-1.5 py-0.5 rounded">
-                  Khung: {new Date(table.reservedFrom).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(table.reservedTo).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              )}
+              <span className="text-[8px] text-rose-600 font-semibold bg-rose-200/30 px-1 py-0.5 rounded">
+                {new Date(currentBooking!.reservedFrom).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          ) : upcomingBooking ? (
+            <div className="w-full flex items-center justify-between">
+              <span className="text-[9px] font-bold text-amber-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                SẮP TỚI
+              </span>
+              <span className="text-[8px] text-amber-700 font-semibold bg-amber-100/50 px-1 py-0.5 rounded border border-amber-200">
+                {new Date(upcomingBooking.reservedFrom).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          ) : isBookedForSelectedTime ? (
+            <div className="w-full flex items-center justify-between">
+              <span className="text-[9px] font-bold text-rose-700 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                ĐÃ ĐẶT (KHUNG GIỜ CHỌN)
+              </span>
             </div>
           ) : (
             <>
               <span
-                className={`text-[10px] font-bold flex items-center gap-1.5 ${
+                className={`text-[9px] font-bold flex items-center gap-1.5 ${
                   isVip ? 'text-amber-700' : 'text-indigo-700'
                 }`}
               >
@@ -406,11 +289,11 @@ const BookingPage: React.FC = () => {
                 SẴN SÀNG
               </span>
               <span
-                className={`text-[9px] font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                className={`text-[8px] font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                   isVip ? 'text-amber-700' : 'text-indigo-700'
                 }`}
               >
-                Đặt ngay →
+                Đặt chỗ →
               </span>
             </>
           )}
@@ -443,7 +326,14 @@ const BookingPage: React.FC = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Bàn đang trống</p>
-            <p className="text-2xl font-black text-emerald-600">{tables.filter((t) => !t.booked).length}</p>
+            <p className="text-2xl font-black text-emerald-600">
+              {tables.filter((t) => {
+                const now = new Date();
+                const tableBookings = todayBookings.filter(b => b.table?.id === t.tableId && b.status !== 'CANCELLED' && b.status !== 'COMPLETED');
+                const isUsed = tableBookings.some(b => b.status === 'CHECKED_IN' || (new Date(b.reservedFrom) <= now && new Date(b.reservedTo) >= now));
+                return !isUsed;
+              }).length}
+            </p>
           </div>
         </div>
 
@@ -455,7 +345,14 @@ const BookingPage: React.FC = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Đang sử dụng</p>
-            <p className="text-2xl font-black text-rose-600">{tables.filter((t) => t.booked).length}</p>
+            <p className="text-2xl font-black text-rose-600">
+              {tables.filter((t) => {
+                const now = new Date();
+                const tableBookings = todayBookings.filter(b => b.table?.id === t.tableId && b.status !== 'CANCELLED' && b.status !== 'COMPLETED');
+                const isUsed = tableBookings.some(b => b.status === 'CHECKED_IN' || (new Date(b.reservedFrom) <= now && new Date(b.reservedTo) >= now));
+                return isUsed;
+              }).length}
+            </p>
           </div>
         </div>
 
@@ -553,7 +450,7 @@ const BookingPage: React.FC = () => {
                     {vipTables.length} bàn
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                   {vipTables.map((table) => renderTableCard(table))}
                 </div>
               </div>
@@ -569,7 +466,7 @@ const BookingPage: React.FC = () => {
                     {standardTables.length} bàn
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                   {standardTables.map((table) => renderTableCard(table))}
                 </div>
               </div>
@@ -587,13 +484,13 @@ const BookingPage: React.FC = () => {
         {selectedTable && (
           <form className="space-y-5" onSubmit={handleBookingSubmit}>
             {/* Modal Header Table Banner */}
-            <div className={`p-4 rounded-2xl flex justify-between items-center ${
+            <div className={`p-4 rounded-xl flex justify-between items-center ${
               selectedTable.tableCode.toLowerCase().includes('vip')
                 ? 'bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/50 text-amber-950'
                 : 'bg-gradient-to-br from-indigo-50 to-indigo-100/30 border border-indigo-100/50 text-indigo-950'
             }`}>
               <div>
-                <p className="font-extrabold text-lg flex items-center gap-1.5">
+                <p className="font-extrabold text-base flex items-center gap-1.5">
                   {selectedTable.tableCode.toLowerCase().includes('vip') && <span>👑</span>}
                   {formatTableCode(selectedTable.tableCode, 'vi')}
                 </p>
@@ -631,84 +528,6 @@ const BookingPage: React.FC = () => {
               placeholder="Ví dụ: Bàn gần cửa sổ, tổ chức sinh nhật..."
             />
 
-            {/* Menu Pre-order Section */}
-            <div className="space-y-3 border-t border-slate-100 pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-slate-800 text-sm">Chuẩn bị món trước (Tùy chọn)</p>
-                  <p className="text-[10px] text-gray-400">Chọn các món bếp chuẩn bị trước để phục vụ nhanh hơn</p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={addDishRow}
-                  disabled={branchFoods.length === 0}
-                  variant="outline"
-                >
-                  + Thêm món ăn
-                </Button>
-              </div>
-
-              {dishRows.length === 0 ? (
-                <div className="text-center py-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-xs text-gray-400">Chưa chọn món chuẩn bị trước nào</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-                  {dishRows.map((row) => (
-                    <div
-                      key={row.id}
-                      className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border border-slate-200/80 rounded-xl p-3 bg-white shadow-sm relative group"
-                    >
-                      <div className="md:col-span-6">
-                        <Select
-                          label="Món ăn"
-                          value={row.foodId}
-                          onChange={(e) => updateDishRow(row.id, 'foodId', e.target.value)}
-                          options={
-                            dishOptions.length > 0
-                              ? dishOptions
-                              : [{ value: '', label: 'Chưa có món nào' }]
-                          }
-                          required
-                        />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Input
-                          label="Số lượng"
-                          type="number"
-                          min={1}
-                          value={row.quantity}
-                          onChange={(e) => updateDishRow(row.id, 'quantity', Number(e.target.value))}
-                          required
-                        />
-                      </div>
-                      <div className="md:col-span-3 flex items-end gap-2">
-                        <div className="flex-1">
-                          <Input
-                            label="Ghi chú món"
-                            value={row.note}
-                            onChange={(e) => updateDishRow(row.id, 'note', e.target.value)}
-                            placeholder="Ít cay..."
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeDishRow(row.id)}
-                          className="p-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors border border-transparent hover:border-rose-100 mb-0.5"
-                          title="Xóa món"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Modal Actions */}
             <div className="flex justify-end space-x-2 border-t border-slate-100 pt-4 mt-2">
               <Button type="button" variant="ghost" onClick={() => setBookingModalOpen(false)}>
@@ -724,5 +543,3 @@ const BookingPage: React.FC = () => {
 };
 
 export default BookingPage;
-
-

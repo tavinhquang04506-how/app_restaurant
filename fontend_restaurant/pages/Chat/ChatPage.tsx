@@ -46,7 +46,7 @@ const ChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const isAdmin = useMemo(
-    () => user?.role === 'ADMIN' || user?.role === 'STAFF',
+    () => user?.role === 'ADMIN',
     [user?.role]
   );
 
@@ -249,7 +249,7 @@ const ChatPage: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <PageContainer title="Chat" description="Chức năng chỉ dành cho admin/nhân viên">
+      <PageContainer title="Chat" description="Chức năng chỉ dành cho quản trị viên (Admin)">
         <Card>
           <p className="text-gray-500 text-sm">Bạn không có quyền truy cập trang chat.</p>
         </Card>

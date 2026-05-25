@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   SafeAreaView, ActivityIndicator, RefreshControl, Image,
-  Modal, ScrollView,
+  Modal, ScrollView, Platform, StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -23,6 +23,7 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<NotificationModel | null>(null);
+  const [imageErrorIds, setImageErrorIds] = useState<string[]>([]);
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -129,8 +130,17 @@ export default function NotificationsScreen() {
       ]}
       onPress={() => handleMarkRead(item)}
     >
-      {item.image ? (
-        <Image source={{ uri: item.image }} style={styles.notifImage} resizeMode="cover" />
+      {item.image && !imageErrorIds.includes(item.id ?? '') ? (
+        <Image
+          source={{ uri: item.image }}
+          style={styles.notifImage}
+          resizeMode="cover"
+          onError={() => {
+            if (item.id) {
+              setImageErrorIds((prev) => [...prev, item.id]);
+            }
+          }}
+        />
       ) : (
         <View style={[styles.iconContainer, { backgroundColor: isDarkMode ? '#2C2C2E' : '#F5F5F5' }]}>
           <Ionicons
@@ -231,13 +241,18 @@ export default function NotificationsScreen() {
 
             {selectedNotification && (
               <ScrollView contentContainerStyle={styles.modalScrollContent}>
-                {selectedNotification.image && (
+                {selectedNotification.image && !imageErrorIds.includes(selectedNotification.id ?? '') ? (
                   <Image
                     source={{ uri: selectedNotification.image }}
                     style={styles.modalImage}
                     resizeMode="cover"
+                    onError={() => {
+                      if (selectedNotification.id) {
+                        setImageErrorIds((prev) => [...prev, selectedNotification.id]);
+                      }
+                    }}
                   />
-                )}
+                ) : null}
                 <Text style={[styles.modalTitle, { color: colors.text }]}>
                   {selectedNotification.title}
                 </Text>
@@ -267,10 +282,14 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
+    paddingTop: 16,
   },
   backBtn: { width: 40, height: 40, justifyContent: 'center' },
   markAllBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },

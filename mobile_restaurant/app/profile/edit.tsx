@@ -91,8 +91,8 @@ export default function ProfileEditScreen() {
           throw new Error(json.message || 'Upload failed');
         }
 
-        const { API_BASE_URL } = await import('../../utils/ApiConfig');
-        const uploadedUrl = `${API_BASE_URL}/storage/avatar/${json.data.fileName}`;
+        const { buildApiBasePath } = await import('../../utils/ApiConfig');
+        const uploadedUrl = `${buildApiBasePath()}/storage/avatar/${json.data.fileName}`;
         setTempAvatarUrl(uploadedUrl);
       }
     } catch (err) {

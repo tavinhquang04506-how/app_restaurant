@@ -149,6 +149,7 @@ public class BookingService {
         return toResponse(saved);
     }
 
+    @Transactional
     public BookingResponse cancel(String id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking"));
@@ -178,6 +179,14 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+
+        // Giải phóng bàn về trạng thái AVAILABLE khi hủy booking để đảm bảo đồng bộ hoàn hảo với sơ đồ bàn trên Web Dashboard
+        RestaurantTable table = booking.getTable();
+        if (table != null) {
+            table.setStatus(com.fwb.restaurant.utils.enums.TableStatus.AVAILABLE);
+            tableRepository.save(table);
+        }
+
         Booking saved = bookingRepository.save(booking);
         this.notificationService.sendBookingCancelled(saved);
         return toResponse(saved);

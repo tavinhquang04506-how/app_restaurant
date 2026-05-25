@@ -111,6 +111,7 @@ const BookingListPage: React.FC = () => {
   // Details modal
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
   // Add-dish state
   const [branchFoods, setBranchFoods] = useState<BranchFood[]>([]);
@@ -381,28 +382,40 @@ const BookingListPage: React.FC = () => {
       ),
     },
     {
+      header: 'Khách hàng',
+      accessor: (b: Booking) => (
+        <div className="flex flex-col">
+          <span className="font-bold text-slate-800">{b.user.username}</span>
+          <span className="text-xs text-slate-500 font-medium">{b.user.phone || 'Chưa cập nhật SĐT'}</span>
+        </div>
+      ),
+    },
+    {
       header: 'Chi nhánh',
       accessor: (b: Booking) => <span className="font-medium text-slate-700">{b.branch.name}</span>,
     },
     {
-      header: 'Bàn',
-      accessor: (b: Booking) => (
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold ${
-          b.table.tableCode.toUpperCase().startsWith('VIP')
-            ? 'bg-purple-50 text-purple-700 border border-purple-100'
-            : 'bg-slate-50 text-slate-700 border border-slate-200'
-        }`}>
-          {b.table.tableCode.toUpperCase().startsWith('VIP') ? '👑 ' : '🪑 '}
-          {b.table.tableCode}
-        </span>
-      ),
+      header: 'Bàn ăn',
+      accessor: (b: Booking) => {
+        const isVip = b.table.tableCode.toUpperCase().startsWith('VIP');
+        return (
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold ${
+            isVip
+              ? 'bg-purple-50 text-purple-700 border border-purple-100'
+              : 'bg-slate-50 text-slate-700 border border-slate-200'
+          }`}>
+            {isVip ? '👑 ' : '🪑 '}
+            {formatTableCode(b.table.tableCode)}
+          </span>
+        );
+      },
     },
     {
-      header: 'Khách',
+      header: 'Số khách',
       accessor: (b: Booking) => (
         <div className="flex items-center gap-1.5">
           <Icon name="users" className="w-4 h-4 text-slate-400" />
-          <span className="font-medium text-slate-700">{b.guests} người</span>
+          <span className="font-bold text-slate-700 text-sm">{b.guests} người</span>
         </div>
       ),
     },
@@ -412,31 +425,31 @@ const BookingListPage: React.FC = () => {
         const s = STATUS_MAP[b.status] ?? { label: b.status, color: 'gray' as const };
         if (b.status === 'CHECKED_IN') {
           return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm gap-1.5 animate-pulse">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm gap-1.5 animate-pulse-slow">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow shadow-emerald-500/50"></span>
               {s.label}
             </span>
           );
         }
         if (b.status === 'CONFIRMED') {
           return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-indigo-500"></span>
               {s.label}
             </span>
           );
         }
         if (b.status === 'COMPLETED') {
           return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 shadow-sm gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 shadow-sm gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-400"></span>
               {s.label}
             </span>
           );
         }
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100 shadow-sm gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100 shadow-sm gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-red-500"></span>
             {s.label}
           </span>
         );
@@ -448,14 +461,14 @@ const BookingListPage: React.FC = () => {
         <div className="flex flex-wrap gap-1.5 items-center">
           <button
             onClick={() => handleViewDetails(b)}
-            className="inline-flex items-center px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition shadow-sm active:scale-95 duration-150"
+            className="inline-flex items-center px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 shadow-sm transition active:scale-95 duration-150"
           >
             Chi tiết
           </button>
           {b.status === 'CONFIRMED' && (
             <button
               onClick={() => handleCheckIn(b.id)}
-              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-sm hover:shadow active:scale-95 transition duration-150"
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-sm hover:shadow active:scale-95 transition duration-150"
             >
               ✓ Check-in
             </button>
@@ -463,7 +476,7 @@ const BookingListPage: React.FC = () => {
           {b.status === 'CHECKED_IN' && (
             <button
               onClick={() => handleComplete(b.id)}
-              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 shadow-sm hover:shadow active:scale-95 transition duration-150"
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 shadow-sm hover:shadow active:scale-95 transition duration-150"
             >
               ✓ Hoàn thành
             </button>
@@ -471,7 +484,7 @@ const BookingListPage: React.FC = () => {
           {b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && b.status !== 'CHECKED_IN' && (
             <button
               onClick={() => handleCancel(b.id)}
-              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 transition active:scale-95 duration-150"
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition active:scale-95 duration-150"
             >
               Huỷ đơn
             </button>
@@ -553,12 +566,40 @@ const BookingListPage: React.FC = () => {
       </div>
 
       <Card
-        className="shadow-sm border border-slate-100 rounded-2xl overflow-hidden"
+        className="shadow-sm border border-slate-100 rounded-2xl overflow-hidden animate-fadeIn"
         actions={
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
+            {/* View Mode Toggle Switch */}
+            <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-250 flex items-center gap-1.5 ${
+                  viewMode === 'table'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon name="clipboard" className="w-3.5 h-3.5" />
+                <span>Xem Bảng</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('card')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-250 flex items-center gap-1.5 ${
+                  viewMode === 'card'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon name="package" className="w-3.5 h-3.5" />
+                <span>Xem Lưới</span>
+              </button>
+            </div>
+
             {isStaff ? (
               <div className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 bg-slate-50 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-indigo-500"></span>
+                <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
                 Chi nhánh: {user?.branchName ?? 'Chưa được gán'}
               </div>
             ) : (
@@ -586,8 +627,10 @@ const BookingListPage: React.FC = () => {
             <p className="text-slate-500 font-medium">Không có lịch đặt bàn nào cho ngày này.</p>
             <p className="text-xs text-slate-400 mt-1">Chọn ngày khác hoặc chuyển chi nhánh để kiểm tra.</p>
           </div>
+        ) : viewMode === 'table' ? (
+          <Table columns={bookingColumns} data={bookings} />
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fadeIn">
             {bookings.map((b) => {
               const statusInfo = STATUS_MAP[b.status] ?? { label: b.status, color: 'gray' };
               const isVip = b.table.tableCode.toUpperCase().startsWith('VIP');
@@ -595,98 +638,82 @@ const BookingListPage: React.FC = () => {
               return (
                 <div 
                   key={b.id} 
-                  className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md hover:border-indigo-100/50 transition-all duration-300 flex flex-col lg:flex-row lg:items-center justify-between gap-4 group"
+                  className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md hover:border-indigo-100/50 transition-all duration-300 flex flex-col justify-between gap-4 group relative overflow-hidden"
                 >
-                  {/* Left Section: Time Card & Branch Info */}
-                  <div className="flex items-center gap-4">
-                    {/* Time Card */}
-                    <div className="bg-indigo-50/60 group-hover:bg-indigo-50 text-indigo-700 px-4 py-3 rounded-2xl flex flex-col items-center justify-center min-w-[90px] border border-indigo-100/30 transition-colors duration-300">
-                      <span className="text-lg font-black tracking-tight">{fmtDt(b.reservedFrom).split(' ')[0]}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500/80 mt-0.5">
-                        {fmtDt(b.reservedFrom).split(' ')[1]}
+                  {isVip && (
+                    <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-purple-400 to-indigo-500"></div>
+                  )}
+                  <div>
+                    {/* Card Header */}
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="inline-flex items-center px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-lg">
+                        ⏰ {fmtDt(b.reservedFrom).split(' ')[1]}
                       </span>
+                      {b.status === 'CHECKED_IN' ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 gap-1 animate-pulse-slow">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                          {statusInfo.label}
+                        </span>
+                      ) : b.status === 'CONFIRMED' ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                          {statusInfo.label}
+                        </span>
+                      ) : b.status === 'COMPLETED' ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-50 text-slate-600 border border-slate-200 gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                          {statusInfo.label}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-100 gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                          {statusInfo.label}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Branch & Time range */}
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-base">{b.branch.name}</h4>
-                      <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1">
-                        <Icon name="calendar" className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{fmtDate(b.reservedFrom).split(' ')[0]}</span>
-                        <span className="mx-1">•</span>
-                        <Icon name="activity" className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{fmtDt(b.reservedFrom).split(' ')[1]} – {fmtDt(b.reservedTo).split(' ')[1]}</span>
+                    {/* Customer & Branch */}
+                    <div className="space-y-2 mb-4">
+                      <h4 className="font-extrabold text-slate-800 text-base group-hover:text-indigo-600 transition-colors truncate">
+                        {b.user.username}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+                        <span>📞 {b.user.phone || 'Chưa cập SĐT'}</span>
+                      </p>
+                      <p className="text-xs text-slate-400 font-medium truncate">
+                        📍 {b.branch.name}
                       </p>
                     </div>
-                  </div>
 
-                  {/* Middle Section: Table Info & Guests */}
-                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-4 lg:gap-8">
-                    {/* Table Pill */}
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Bàn ăn</span>
-                      <div>
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-sm ${
-                          isVip
-                            ? 'bg-purple-50 text-purple-700 border border-purple-100'
-                            : 'bg-slate-50 text-slate-700 border border-slate-200'
-                        }`}>
-                          <span>{isVip ? '👑' : '🪑'}</span>
-                          <span>{formatTableCode(b.table.tableCode)}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Guest Count */}
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Số khách</span>
-                      <div className="flex items-center gap-1.5 text-slate-700 py-1">
-                        <Icon name="users" className="w-4 h-4 text-slate-400" />
-                        <span className="font-bold text-sm">{b.guests} người</span>
-                      </div>
-                    </div>
-
-                    {/* Status Pill */}
-                    <div className="flex flex-col col-span-2 sm:col-span-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Trạng thái</span>
-                      <div>
-                        {b.status === 'CHECKED_IN' ? (
-                          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm gap-1.5 animate-pulse-slow">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 shadow shadow-emerald-500/50"></span>
-                            {statusInfo.label}
-                          </span>
-                        ) : b.status === 'CONFIRMED' ? (
-                          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-indigo-500"></span>
-                            {statusInfo.label}
-                          </span>
-                        ) : b.status === 'COMPLETED' ? (
-                          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 shadow-sm gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-slate-400"></span>
-                            {statusInfo.label}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100 shadow-sm gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                            {statusInfo.label}
-                          </span>
-                        )}
-                      </div>
+                    {/* Table & Guest Pills */}
+                    <div className="flex gap-2 pt-3 border-t border-slate-50">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold ${
+                        isVip
+                          ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                          : 'bg-slate-50 text-slate-700 border border-slate-200'
+                      }`}>
+                        <span>{isVip ? '👑' : '🪑'}</span>
+                        <span>{formatTableCode(b.table.tableCode)}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100/50">
+                        <span>👥</span>
+                        <span>{b.guests} khách</span>
+                      </span>
                     </div>
                   </div>
 
-                  {/* Right Section: Premium Actions */}
-                  <div className="flex flex-wrap items-center gap-2 border-t border-slate-50 pt-3 lg:border-none lg:pt-0">
+                  {/* Actions footer */}
+                  <div className="flex gap-2 pt-3 border-t border-slate-50/80">
                     <button
                       onClick={() => handleViewDetails(b)}
-                      className="flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 shadow-sm transition-all duration-200 active:scale-95"
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-all duration-200 active:scale-95"
                     >
                       Chi tiết
                     </button>
                     {b.status === 'CONFIRMED' && (
                       <button
                         onClick={() => handleCheckIn(b.id)}
-                        className="flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md shadow-emerald-100/50 hover:shadow-emerald-200/50 transition-all duration-200 active:scale-95"
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md shadow-emerald-100/30 transition-all duration-200 active:scale-95"
                       >
                         ✓ Check-in
                       </button>
@@ -694,7 +721,7 @@ const BookingListPage: React.FC = () => {
                     {b.status === 'CHECKED_IN' && (
                       <button
                         onClick={() => handleComplete(b.id)}
-                        className="flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 shadow-md shadow-indigo-100/50 hover:shadow-indigo-200/50 transition-all duration-200 active:scale-95"
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 shadow-md shadow-indigo-100/30 transition-all duration-200 active:scale-95"
                       >
                         ✓ Hoàn thành
                       </button>
@@ -702,7 +729,7 @@ const BookingListPage: React.FC = () => {
                     {b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && b.status !== 'CHECKED_IN' && (
                       <button
                         onClick={() => handleCancel(b.id)}
-                        className="flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-all duration-200 active:scale-95"
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-all duration-200 active:scale-95"
                       >
                         Huỷ đơn
                       </button>

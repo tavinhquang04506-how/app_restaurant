@@ -29,32 +29,32 @@ public class ChatController {
 
     @GetMapping("/conversations")
     @ApiMessage("Get All Conversations Only Admin")
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<ChatConversationResponse> getConversations() {
         return chatService.getRecentConversationsForAdmin();
     }
 
     @GetMapping("/conversations/me")
     @ApiMessage("Get My Conversation")
-    @PreAuthorize("hasAnyRole('USER','ADMIN','STAFF')")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ChatConversationResponse getMyConversation() {
         return chatService.getMyConversation();
     }
 
     @GetMapping("/conversations/{conversationId}/messages")
     @ApiMessage("Get Message")
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<ChatMessageResponse> getMessages(@PathVariable String conversationId) {
         return chatService.getMessages(conversationId);
     }
 
     @PostMapping("/messages")
     @ApiMessage("Send Message (fallback REST)")
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF','USER')")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ChatMessageResponse sendMessage(@RequestBody @Valid ChatMessageRequest request,
                                            Authentication authentication) {
         boolean fromAdmin = authentication.getAuthorities().stream()
-                .anyMatch(auth -> auth.getAuthority().contains("ADMIN") || auth.getAuthority().contains("STAFF"));
+                .anyMatch(auth -> auth.getAuthority().contains("ADMIN"));
 
         ChatMessageResponse response = chatService.handleIncomingMessage(request, fromAdmin);
         ChatConversationResponse conversation = chatService.getConversationSummary(response.getConversationId());
@@ -71,14 +71,14 @@ public class ChatController {
 
     @PostMapping("/conversations/{conversationId}/connect")
     @ApiMessage("Staff connects to conversation")
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ChatConversationResponse connectConversation(@PathVariable String conversationId) {
         return chatService.connectToConversation(conversationId);
     }
 
     @PostMapping("/conversations/{conversationId}/close")
     @ApiMessage("Close conversation")
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF','USER')")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ChatConversationResponse closeConversation(@PathVariable String conversationId) {
         return chatService.closeConversation(conversationId);
     }

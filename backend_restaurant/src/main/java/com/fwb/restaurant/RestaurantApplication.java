@@ -141,7 +141,7 @@ public class RestaurantApplication {
 			}
 
 			// 7. Đồng bộ/áp đặt tên tiếng Việt thật cho các tài khoản thử nghiệm nếu họ đã được tạo trước đó
-			jdbcTemplate.update("UPDATE users SET username = 'Nguyễn Hoàng Nam' WHERE email = 'admin@gmail.com'");
+			jdbcTemplate.update("UPDATE users SET username = 'Admin' WHERE email = 'admin@gmail.com'");
 			jdbcTemplate.update("UPDATE users SET username = 'Phan Thị Tuyết Mai' WHERE email = 'staff@gmail.com'");
 			jdbcTemplate.update("UPDATE users SET username = 'Lê Thanh Tùng' WHERE email = 'manager@gmail.com'");
 			jdbcTemplate.update("UPDATE users SET username = 'Trần Minh Đức' WHERE email = 'manager2@gmail.com'");

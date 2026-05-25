@@ -19,6 +19,7 @@ import Button from '../../components/ui/Button';
 import { restaurantApi } from '../../services/restaurantApi';
 import type { Branch, Food, User, RestaurantTable, Booking, Promotion } from '../../types/types';
 import { useAuth } from '../../context/AuthContext';
+import { formatTableCode } from '../../utils/tableUtils';
 
 const StatCard: React.FC<{
   icon: keyof typeof Icon;
@@ -346,7 +347,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
                       dx={-4}
                     />
                     <Tooltip content={<CustomTooltip unit={unit} />} cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }} />
-                    <Bar dataKey={chartKey} fill="url(#barGradient)" radius={[6, 6, 0, 0]} barSize={26} />
+                    <Bar dataKey={chartKey} fill="url(#barGradient)" radius={[6, 6, 0, 0]} barSize={60} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -805,7 +806,7 @@ const StaffDashboard: React.FC = () => {
                 <div className="mt-3 p-3 bg-white/70 border border-slate-100/60 rounded-2xl flex justify-between items-center gap-3">
                   <div>
                     <p className="font-extrabold text-xs text-slate-800">{nextBooking.user.username}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Bàn: {nextBooking.table.tableCode} ({nextBooking.guests} người)</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Bàn: {formatTableCode(nextBooking.table.tableCode)} ({nextBooking.guests} người)</p>
                   </div>
                   <span className="shrink-0 text-right px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-extrabold rounded-full">
                     ⏰ {nextBooking.reservedFrom.slice(11, 16)}
@@ -919,7 +920,7 @@ const StaffDashboard: React.FC = () => {
                     >
                       <div className={`absolute top-0 left-0 right-0 h-1.5 ${accentColor}`}></div>
                       <div className="flex justify-between items-start mb-2">
-                        <span className="font-extrabold text-slate-800 text-sm">{table.tableCode}</span>
+                        <span className="font-extrabold text-slate-800 text-sm">{formatTableCode(table.tableCode, 'vi', true)}</span>
                         <span className={`px-2 py-0.5 text-[9px] font-extrabold border rounded-full ${statusBadge}`}>
                           {table.status === 'AVAILABLE' ? 'Trống' : table.status === 'UNAVAILABLE' ? 'Khách' : 'Bảo trì'}
                         </span>
@@ -930,7 +931,7 @@ const StaffDashboard: React.FC = () => {
                       {activeBk && (
                         <div className="mt-3 pt-2.5 border-t border-slate-100/60">
                           <p className="text-[10px] font-bold text-indigo-600 truncate">👤 {activeBk.user.username}</p>
-                          <p className="text-[9px] text-slate-400 mt-0.5">⏰ {activeBk.reservedFrom.slice(11, 16)} - {activeBk.reservedTo.slice(11, 16)}</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">⏰ {activeBk.reservedFrom.slice(11, 16)}</p>
                         </div>
                       )}
                     </div>
@@ -947,7 +948,7 @@ const StaffDashboard: React.FC = () => {
                 <div>
                   <h4 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                    Chi tiết {selectedTable.tableCode}
+                    Chi tiết {formatTableCode(selectedTable.tableCode)}
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">Sức chứa: {selectedTable.capacity} người | Khu vực: {selectedTable.location || 'Chung'}</p>
                 </div>
@@ -1007,8 +1008,8 @@ const StaffDashboard: React.FC = () => {
                       <p className="font-bold text-slate-800 mt-0.5">{activeBooking.guests} người</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">⏰ Khung giờ dùng bữa:</p>
-                      <p className="font-bold text-slate-800 mt-0.5">{activeBooking.reservedFrom.slice(11, 16)} - {activeBooking.reservedTo.slice(11, 16)}</p>
+                      <p className="text-slate-400">⏰ Thời gian khách đặt:</p>
+                      <p className="font-bold text-slate-800 mt-0.5">{activeBooking.reservedFrom.slice(11, 16)}</p>
                     </div>
                     {activeBooking.specialRequest && (
                       <div className="sm:col-span-2 pt-2 border-t border-slate-200/50">
