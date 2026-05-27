@@ -55,6 +55,7 @@ public class BookingService {
     private final FoodRatingRepository foodRatingRepository;
     private final PromotionService promotionService;
     private final NotificationService notificationService;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BookingService.class);
     private static final Set<BookingStatus> ACTIVE_STATUSES =
             Set.of(BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN);
     private static final Set<BookingStatus> LIST_STATUSES = EnumSet.allOf(BookingStatus.class);
@@ -603,6 +604,35 @@ public class BookingService {
         Branch managedBranch = requireManagedBranch(user);
         if (!booking.getBranch().getId().equals(managedBranch.getId())) {
             throw new ConflictException("Bạn không thể thao tác booking của chi nhánh khác");
+        }
+    }
+
+    @Transactional
+    public void cancelLateBookings() {
+        LocalDateTime limit = LocalDateTime.now().minusMinutes(15);
+        List<Booking> lateBookings = bookingRepository.findByStatusAndReservedFromBefore(
+                BookingStatus.CONFIRMED, limit
+        );
+
+        for (Booking booking : lateBookings) {
+            log.info("Auto-cancelling late booking: id={}", booking.getId());
+            
+            booking.setStatus(BookingStatus.CANCELLED);
+            booking.setDepositRefunded(true);
+
+            RestaurantTable table = booking.getTable();
+            if (table != null) {
+                table.setStatus(com.fwb.restaurant.utils.enums.TableStatus.AVAILABLE);
+                tableRepository.save(table);
+            }
+
+            bookingRepository.save(booking);
+
+            try {
+                notificationService.sendBookingCancelled(booking);
+            } catch (Exception e) {
+                log.error("Failed to send auto-cancellation notification for booking id={}", booking.getId(), e);
+            }
         }
     }
 }

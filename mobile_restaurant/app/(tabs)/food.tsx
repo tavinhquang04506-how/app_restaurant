@@ -20,6 +20,15 @@ import type { FoodModel } from '../../models/FoodModels';
 import type { CategoryModel } from '../../models/CategoryModels';
 import { formatTableCode } from '../../utils/Utils';
 
+const getCategoryPriority = (categoryName?: string) => {
+  if (!categoryName) return 4;
+  const name = categoryName.toLowerCase().trim();
+  if (name.includes('món chính') || name.includes('mains')) return 1;
+  if (name.includes('tráng miệng') || name.includes('desserts')) return 2;
+  if (name.includes('đồ uống') || name.includes('drinks')) return 3;
+  return 4;
+};
+
 export default function FoodScreen() {
   const router = useRouter();
   const { isLoggedIn, booking } = useAuth();
@@ -39,32 +48,63 @@ export default function FoodScreen() {
 
   const loadData = useCallback(async () => {
     try {
+      const branchId = booking?.branchId;
+      const hasActiveBranch = !!branchId;
+
       const [catRes, foodRes] = await Promise.all([
         Api.getCategories().catch(() => ({ data: [] as CategoryModel[] })),
-        Api.getFoods({
-          page: 1, size: 50,
-          name: searchQuery || undefined,
-          categoryId: selectedCategory || undefined,
-        }).catch(() => ({ data: [] as FoodModel[] })),
+        hasActiveBranch
+          ? Api.getBranchFoods({
+              branchId: branchId!,
+              page: 1,
+              size: 50,
+              keyword: searchQuery || undefined,
+              categoryId: selectedCategory || undefined,
+            })
+              .then((res) => {
+                const branchSpecificFoods = (res.data || [])
+                  .filter((bf: any) => bf.active && bf.food)
+                  .map((bf: any) => ({
+                    ...bf.food,
+                    price: bf.price ?? bf.food.price,
+                  }));
+                return { data: branchSpecificFoods as FoodModel[] };
+              })
+              .catch(() => ({ data: [] as FoodModel[] }))
+          : Api.getFoods({
+              page: 1,
+              size: 50,
+              name: searchQuery || undefined,
+              categoryId: selectedCategory || undefined,
+            }).catch(() => ({ data: [] as FoodModel[] })),
       ]);
       setCategories(catRes.data);
       const foodList = foodRes.data;
       const sortedFoods = [...foodList].sort((a, b) => {
         const aBS = (a.sold ?? 0) >= 800;
         const bBS = (b.sold ?? 0) >= 800;
+
+        // Rule 1: Featured (Best Seller) first
         if (aBS && !bBS) return -1;
         if (!aBS && bBS) return 1;
-        if (aBS && bBS) return (b.sold ?? 0) - (a.sold ?? 0);
+
+        // Rule 2: Category priority: Mains -> Desserts -> Drinks -> Others
+        const aPri = getCategoryPriority(a.categoryName);
+        const bPri = getCategoryPriority(b.categoryName);
+        if (aPri !== bPri) {
+          return aPri - bPri;
+        }
+
+        // Rule 3: Alphabetical sort within same priority
         return a.name.localeCompare(b.name, 'vi');
       });
       setFoods(sortedFoods);
-
 
     } catch {} finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchQuery, selectedCategory, isLoggedIn]);
+  }, [searchQuery, selectedCategory, isLoggedIn, booking]);
 
   useEffect(() => { setLoading(true); loadData(); }, [loadData]);
 

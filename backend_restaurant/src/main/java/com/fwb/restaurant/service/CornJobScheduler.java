@@ -46,5 +46,12 @@ public class CornJobScheduler {
             this.bookingService.setReminderBooking(b);
         }
     }
+
+    @Scheduled(fixedRate = 60000) // 1 phút
+    @Transactional
+    public void autoCancelLateBookings() {
+        log.info("Running cron job: Checking for late bookings to auto-cancel...");
+        bookingService.cancelLateBookings();
+    }
 }
 

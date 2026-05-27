@@ -68,5 +68,7 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to
     );
+
+    List<Booking> findByStatusAndReservedFromBefore(BookingStatus status, LocalDateTime dateTime);
 }
 
