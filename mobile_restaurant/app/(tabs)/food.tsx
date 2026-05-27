@@ -63,7 +63,7 @@ export default function FoodScreen() {
             })
               .then((res) => {
                 const branchSpecificFoods = (res.data || [])
-                  .filter((bf: any) => bf.active && bf.food)
+                  .filter((bf: any) => bf.active && bf.food && bf.food.active !== false)
                   .map((bf: any) => ({
                     ...bf.food,
                     price: bf.price ?? bf.food.price,
@@ -79,7 +79,7 @@ export default function FoodScreen() {
             }).catch(() => ({ data: [] as FoodModel[] })),
       ]);
       setCategories(catRes.data);
-      const foodList = foodRes.data;
+      const foodList = foodRes.data.filter((f: any) => f.active !== false);
       const sortedFoods = [...foodList].sort((a, b) => {
         const aBS = (a.sold ?? 0) >= 800;
         const bBS = (b.sold ?? 0) >= 800;

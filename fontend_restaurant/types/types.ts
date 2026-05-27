@@ -93,6 +93,7 @@ export interface Food {
   category?: Category;
   avgRating?: number;
   ratingCount?: number;
+  active?: boolean;
 }
 
 export interface BranchFood {

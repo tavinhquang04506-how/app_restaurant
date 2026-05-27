@@ -143,7 +143,7 @@ export default function HomeScreen() {
         Api.getBranches().catch(() => ({ data: [] as BranchModel[] })),
       ]);
       setPromotions(promoRes.data);
-      setFoods(foodRes.data);
+      setFoods((foodRes.data || []).filter((f: any) => f.active !== false));
       setBranches(branchRes.data);
 
       if (isLoggedIn) {

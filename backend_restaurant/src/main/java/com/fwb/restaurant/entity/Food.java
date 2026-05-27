@@ -21,6 +21,9 @@ public class Food extends BaseEntity{
     private long price;
 
     @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(nullable = false)
     private long sold = 0;
 
     // Thống kê rating đơn giản cho món ăn

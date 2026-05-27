@@ -15,4 +15,5 @@ public class FoodResponse {
     private CategoryResponse category;
     private Double avgRating;
     private Long ratingCount;
+    private boolean active;
 }

@@ -20,6 +20,7 @@ export interface FoodModel {
   ratingCount?: number;
   sold?: number;
   imageUrl?: string;
+  active?: boolean;
 }
 
 export function parseFoodModel(json: any): FoodModel {
@@ -36,6 +37,7 @@ export function parseFoodModel(json: any): FoodModel {
     ratingCount: json.ratingCount != null ? Number(json.ratingCount) : undefined,
     sold: json.sold != null ? Number(json.sold) : undefined,
     imageUrl: resolveFoodImageUrl(json.thumbUrl),
+    active: json.active !== undefined ? Boolean(json.active) : true,
   };
 }
 

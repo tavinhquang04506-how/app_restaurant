@@ -22,4 +22,5 @@ public class FoodRequest {
     private long price;
     @NotBlank(message = "Loại món ăn không được để trống...")
     private String categoryId;
+    private boolean active = true;
 }

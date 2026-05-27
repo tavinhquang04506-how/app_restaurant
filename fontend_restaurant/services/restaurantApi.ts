@@ -102,6 +102,7 @@ export interface CreateFoodPayload {
   thumbUrl?: string;
   price: number;
   categoryId: string;
+  active?: boolean;
 }
 
 export interface UpdateFoodPayload extends CreateFoodPayload {}

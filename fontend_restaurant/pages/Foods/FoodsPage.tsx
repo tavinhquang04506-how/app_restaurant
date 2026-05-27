@@ -24,6 +24,7 @@ const emptyFood = {
   thumbUrl: '',
   price: 10000,
   categoryId: '',
+  active: true,
 };
 
 const PAGE_SIZE = 20;
@@ -121,6 +122,7 @@ const FoodsPage: React.FC = () => {
       thumbUrl: normalizeThumbValue(food.thumbUrl),
       price: food.price,
       categoryId: food.category?.id ?? '',
+      active: food.active ?? true,
     });
     setModalOpen(true);
   };
@@ -207,6 +209,26 @@ const FoodsPage: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Không thể xóa món ăn';
       setError(message);
+      showToast(message, 'error');
+    }
+  };
+
+  const handleToggleActive = async (food: Food) => {
+    try {
+      const newActive = food.active !== false ? false : true;
+      const payload = {
+        name: food.name,
+        description: food.description,
+        thumbUrl: normalizeThumbValue(food.thumbUrl) || undefined,
+        price: food.price,
+        categoryId: food.category?.id ?? '',
+        active: newActive,
+      };
+      await restaurantApi.updateFood(food.id, payload);
+      showToast(`Đã ${newActive ? 'bật bán' : 'tạm ngưng'} món ăn trên toàn hệ thống!`, 'success');
+      loadFoods();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể thay đổi trạng thái';
       showToast(message, 'error');
     }
   };
@@ -329,11 +351,26 @@ const FoodsPage: React.FC = () => {
       },
     },
     {
+      header: 'Trạng thái',
+      accessor: (food: Food) => (
+        <Badge color={food.active !== false ? 'green' : 'red'} size="sm">
+          {food.active !== false ? 'Đang bán' : 'Tạm ngưng'}
+        </Badge>
+      ),
+    },
+    {
       header: 'Hành động',
       accessor: (food: Food) => (
         <div className="flex space-x-2">
           <Button variant="ghost" size="sm" onClick={() => openEditModal(food)}>
             Sửa
+          </Button>
+          <Button
+            variant={food.active !== false ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={() => handleToggleActive(food)}
+          >
+            {food.active !== false ? 'Tắt' : 'Bật'}
           </Button>
           <Button variant="danger" size="sm" onClick={() => handleDelete(food)}>
             Xóa
@@ -523,6 +560,21 @@ const FoodsPage: React.FC = () => {
             }
             required
           />
+          <div className="flex items-center space-x-2 py-2">
+            <input
+              type="checkbox"
+              id="active"
+              name="active"
+              checked={formValues.active}
+              onChange={(e) => {
+                setFormValues((prev) => ({ ...prev, active: e.target.checked }));
+              }}
+              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+            />
+            <label htmlFor="active" className="text-sm font-medium text-gray-700 select-none">
+              Trạng thái: Cho phép phục vụ (Đang bán trên hệ thống và ứng dụng)
+            </label>
+          </div>
           <div className="flex justify-end space-x-2 pt-2">
             <Button type="button" variant="ghost" onClick={closeModal}>
               Hủy
