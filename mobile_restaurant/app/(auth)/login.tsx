@@ -43,15 +43,6 @@ export default function LoginScreen() {
       if (!res.data) throw new Error('Không thể đăng nhập');
       
       const mappedUser = userFromSessionModel(res.data.user);
-      if (mappedUser.role && mappedUser.role !== 'USER') {
-        const errorMsg = 'Tài khoản nội bộ (Admin/Quản lý/Nhân viên) không được phép sử dụng ứng dụng di động của Khách hàng. Vui lòng truy cập trang quản trị trên Web Dashboard để làm việc.';
-        if (Platform.OS !== 'web') {
-          Alert.alert('⚠️ Quyền truy cập bị từ chối!', errorMsg);
-        } else {
-          setApiError(errorMsg);
-        }
-        return;
-      }
 
       await setAuthSession(
         mappedUser,

@@ -59,3 +59,9 @@ mobile_restaurant/tsc_output.txt
 # Locally saved diagrams
 erd_diagram.png
 class_diagram.png
+
+# Dynamically uploaded files
+upload/
+
+# Database backups
+database_backup_*.sql

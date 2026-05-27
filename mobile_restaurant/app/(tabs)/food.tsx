@@ -33,7 +33,6 @@ export default function FoodScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFoodDetail, setSelectedFoodDetail] = useState<FoodModel | null>(null);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   
   const addItem = useCartStore((s) => s.addItem);
   const cartItemCount = useCartStore((s) => s.items.reduce((acc, item) => acc + item.quantity, 0));
@@ -60,12 +59,7 @@ export default function FoodScreen() {
       });
       setFoods(sortedFoods);
 
-      if (isLoggedIn) {
-        const favs = await Api.getFavorites().catch(() => ({ data: [] }));
-        setFavoriteIds(favs.data.map((f: any) => f.id));
-      } else {
-        setFavoriteIds([]);
-      }
+
     } catch {} finally {
       setLoading(false);
       setRefreshing(false);
@@ -74,16 +68,7 @@ export default function FoodScreen() {
 
   useEffect(() => { setLoading(true); loadData(); }, [loadData]);
 
-  // Sync favorites when logged in status changes
-  useEffect(() => {
-    if (isLoggedIn) {
-      Api.getFavorites()
-        .then((res) => setFavoriteIds(res.data.map((f) => f.id)))
-        .catch(() => setFavoriteIds([]));
-    } else {
-      setFavoriteIds([]);
-    }
-  }, [isLoggedIn]);
+
 
   const onRefresh = () => { setRefreshing(true); loadData(); };
 
@@ -103,38 +88,7 @@ export default function FoodScreen() {
     Alert.alert(t('successTitle'), t('addedToCartSuccess').replace('{name}', food.name));
   };
 
-  const handleToggleFavorite = async (foodId: string, willBeFavorite: boolean) => {
-    if (!isLoggedIn) {
-      Alert.alert(
-        t('loginRequired'),
-        t('loginRequiredFavDesc'),
-        [
-          { text: t('cancel'), style: 'cancel' },
-          { text: language === 'vi' ? 'Đăng nhập' : 'Log In', onPress: () => router.push('/(auth)/login') }
-        ]
-      );
-      return;
-    }
 
-    // Optimistic Update
-    setFavoriteIds((prev) =>
-      willBeFavorite ? [...prev, foodId] : prev.filter((id) => id !== foodId)
-    );
-
-    try {
-      if (willBeFavorite) {
-        await Api.addFavorite(foodId);
-      } else {
-        await Api.removeFavorite(foodId);
-      }
-    } catch (err: any) {
-      // Revert on failure
-      setFavoriteIds((prev) =>
-        willBeFavorite ? prev.filter((id) => id !== foodId) : [...prev, foodId]
-      );
-      Alert.alert(t('alertTitle'), err.message || t('failedFavUpdate'));
-    }
-  };
 
   const renderCategory = ({ item }: { item: CategoryModel }) => {
     const isActive = selectedCategory === item.id;
@@ -162,7 +116,6 @@ export default function FoodScreen() {
 
   const renderFood = ({ item }: { item: FoodModel }) => {
     const isBestSeller = (item.sold ?? 0) >= 800;
-    const isFav = favoriteIds.includes(item.id);
 
     return (
       <TouchableOpacity
@@ -210,9 +163,6 @@ export default function FoodScreen() {
 
         {/* Action Column */}
         <View style={styles.actionCol}>
-          <TouchableOpacity style={styles.heartBtn} onPress={() => handleToggleFavorite(item.id, !isFav)}>
-            <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={20} color={colors.primary} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
             onPress={() => handleAddToCart(item)}
@@ -339,8 +289,6 @@ export default function FoodScreen() {
         food={selectedFoodDetail}
         onClose={() => setSelectedFoodDetail(null)}
         isLoggedIn={isLoggedIn}
-        favoriteIds={favoriteIds}
-        onToggleFavorite={handleToggleFavorite}
         onAddToCart={handleAddToCart}
       />
     </SafeAreaView>
@@ -460,9 +408,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingLeft: 4,
   },
-  heartBtn: {
-    padding: 6,
-  },
+
   floatingBanner: {
     position: 'absolute',
     bottom: 0,

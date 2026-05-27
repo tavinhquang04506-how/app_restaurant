@@ -83,7 +83,6 @@ const dictionary = {
 
     // User Profile
     personalInfo: 'Thông tin cá nhân',
-    favorites: 'Yêu thích',
     myReviews: 'Đánh giá của tôi',
     notifications: 'Hộp thư thông báo',
     liveHelp: 'Trợ lý hỗ trợ 3Ship',
@@ -141,11 +140,9 @@ const dictionary = {
     confirmSelectedTable: 'Xác nhận bàn đã chọn',
     loginRequired: 'Yêu cầu đăng nhập',
     loginRequiredCartDesc: 'Vui lòng đăng nhập để thêm món ăn vào giỏ hàng và sử dụng đầy đủ dịch vụ.',
-    loginRequiredFavDesc: 'Vui lòng đăng nhập để thêm món ăn vào danh sách yêu thích.',
     addedToCartSuccess: 'Đã thêm món "{name}" vào giỏ hàng!',
     noDishesFound: 'Không tìm thấy món ăn nào',
     alertTitle: 'Thông báo',
-    failedFavUpdate: 'Không thể cập nhật danh sách yêu thích.',
 
     // Saved Promotions
     savedPromotions: 'Ưu đãi đã lưu',
@@ -236,7 +233,6 @@ const dictionary = {
 
     // User Profile
     personalInfo: 'Personal Info',
-    favorites: 'Favorites',
     myReviews: 'My Reviews',
     notifications: 'Notifications',
     liveHelp: '3Ship Live Help',
@@ -294,11 +290,9 @@ const dictionary = {
     confirmSelectedTable: 'Confirm Selected Table',
     loginRequired: 'Login Required',
     loginRequiredCartDesc: 'Please log in to add items to cart and use full services.',
-    loginRequiredFavDesc: 'Please log in to add items to your favorites.',
     addedToCartSuccess: 'Added "{name}" to cart successfully!',
     noDishesFound: 'No dishes found',
     alertTitle: 'Notification',
-    failedFavUpdate: 'Failed to update favorites.',
 
     // Saved Promotions
     savedPromotions: 'Saved Promotions',

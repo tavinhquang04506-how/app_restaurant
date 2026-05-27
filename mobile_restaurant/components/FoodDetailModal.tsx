@@ -17,8 +17,6 @@ interface FoodDetailModalProps {
   onClose: () => void;
   food: FoodModel | null;
   isLoggedIn: boolean;
-  favoriteIds: string[];
-  onToggleFavorite: (foodId: string, willBeFavorite: boolean) => void;
   onAddToCart: (food: FoodModel) => void;
 }
 
@@ -35,8 +33,6 @@ export function FoodDetailModal({
   onClose,
   food,
   isLoggedIn,
-  favoriteIds,
-  onToggleFavorite,
   onAddToCart,
 }: FoodDetailModalProps) {
   const { colors, isDarkMode } = useThemeStore();
@@ -45,8 +41,7 @@ export function FoodDetailModal({
   const [ratings, setRatings] = useState<RatingItem[]>([]);
   const [loadingRatings, setLoadingRatings] = useState(false);
 
-  // Sync state for immediate favorite toggle
-  const isFav = food ? favoriteIds.includes(food.id) : false;
+
 
   useEffect(() => {
     if (visible && food) {
@@ -612,17 +607,7 @@ export function FoodDetailModal({
 
   const activeReviews = ratings.length > 0 ? ratings : getMockReviews(translateDbText(food.name));
 
-  const handleFavoriteClick = () => {
-    if (!isLoggedIn) {
-      Alert.alert(
-        language === 'vi' ? 'Đăng nhập để thả tim' : 'Login Required',
-        language === 'vi' ? 'Vui lòng đăng nhập để lưu món ăn này vào danh sách yêu thích.' : 'Please log in to save this dish to your favorites.',
-        [{ text: t('close') }]
-      );
-      return;
-    }
-    onToggleFavorite(food.id, !isFav);
-  };
+
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -645,7 +630,7 @@ export function FoodDetailModal({
               <FoodImage uri={food.imageUrl} size={220} style={styles.image} />
             </View>
 
-            {/* Title & Favorite Row */}
+            {/* Title Row */}
             <View style={styles.titleRow}>
               <View style={styles.titleCol}>
                 <Text style={[styles.foodName, { color: colors.text }]}>{translateDbText(food.name)}</Text>
@@ -655,14 +640,6 @@ export function FoodDetailModal({
                   </View>
                 )}
               </View>
-
-              <TouchableOpacity onPress={handleFavoriteClick} style={styles.favBtn}>
-                <Ionicons
-                  name={isFav ? 'heart' : 'heart-outline'}
-                  size={28}
-                  color={isFav ? colors.primary : colors.textSecondary}
-                />
-              </TouchableOpacity>
             </View>
 
             {/* Price tag */}
@@ -879,9 +856,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  favBtn: {
-    padding: 4,
-  },
+
   foodPrice: {
     fontSize: 20,
     fontWeight: 'bold',

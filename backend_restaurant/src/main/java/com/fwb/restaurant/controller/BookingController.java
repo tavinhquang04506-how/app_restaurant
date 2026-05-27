@@ -37,6 +37,21 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.cancel(id));
     }
 
+    @PostMapping("/bookings/{id}/pay-success")
+    @ApiMessage("Xác nhận thanh toán thành công")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+    public ResponseEntity<BookingResponse> paySuccess(@PathVariable String id) {
+        return ResponseEntity.ok(bookingService.paySuccess(id));
+    }
+
+    @DeleteMapping("/bookings/{id}")
+    @ApiMessage("Xóa booking khi rời khỏi thanh toán")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+    public ResponseEntity<Void> delete(@PathVariable String id) {
+        bookingService.delete(id);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/bookings/{id}/complete")
     @ApiMessage("Hoàn thành booking")
     @PreAuthorize("hasAnyRole('STAFF', 'MANAGER', 'ADMIN')")
@@ -56,9 +71,10 @@ public class BookingController {
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF')")
     public ResponseEntity<List<BookingResponse>> getBookings(
             @RequestParam(required = false) String branchId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String month
     ) {
-        return ResponseEntity.ok(bookingService.getBookings(branchId, date));
+        return ResponseEntity.ok(bookingService.getBookings(branchId, date, month));
     }
 
     @GetMapping("/branches/{branchId}/tables/availability")

@@ -377,7 +377,7 @@ const BookingListPage: React.FC = () => {
       accessor: (b: Booking) => (
         <div className="flex flex-col">
           <span className="font-semibold text-slate-800">{fmtDt(b.reservedFrom).split(' ')[0]}</span>
-          <span className="text-xs text-slate-400 font-medium">{fmtDt(b.reservedFrom).split(' ')[1]} – {fmtDt(b.reservedTo).split(' ')[1]}</span>
+          <span className="text-xs text-slate-400 font-medium">{fmtDt(b.reservedFrom).split(' ')[1]}</span>
         </div>
       ),
     },
@@ -747,7 +747,7 @@ const BookingListPage: React.FC = () => {
         isOpen={detailsOpen && !!selectedBooking}
         onClose={() => { setDetailsOpen(false); setSelectedBooking(null); setAddDishOpen(false); }}
         title="Quản lý chi tiết lịch hẹn"
-        size="xl"
+        size="2xl"
         footer={
           <div className="flex flex-wrap gap-2 justify-end">
             {selectedBooking?.status === 'CONFIRMED' && (
@@ -804,7 +804,7 @@ const BookingListPage: React.FC = () => {
                 </p>
                 <p className="flex items-center justify-between py-1">
                   <span className="font-medium text-slate-500">Thời gian:</span> 
-                  <span className="font-semibold text-slate-800">{fmtDt(selectedBooking.reservedFrom)} – {fmtDt(selectedBooking.reservedTo)}</span>
+                  <span className="font-semibold text-slate-800">{fmtDt(selectedBooking.reservedFrom)}</span>
                 </p>
               </div>
               <div className="space-y-3">
@@ -1062,7 +1062,7 @@ const BookingListPage: React.FC = () => {
                 <span>Số khách:</span><span>{selectedBooking.guests}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                <span>Thời gian:</span><span>{fmtDt(selectedBooking.reservedFrom)} – {fmtDt(selectedBooking.reservedTo)}</span>
+                <span>Thời gian:</span><span>{fmtDt(selectedBooking.reservedFrom)}</span>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '10px 0' }} />

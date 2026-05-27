@@ -44,8 +44,8 @@ export default function UserScreen() {
           </Text>
           <Text style={[styles.loginSubPrompt, { color: colors.textSecondary }]}>
             {language === 'vi' 
-              ? 'Xem lịch sử bàn đặt, lưu món yêu thích và nhận nhiều ưu đãi đặc quyền!'
-              : 'View table reservation history, save favorite dishes, and receive exclusive offers!'}
+              ? 'Xem lịch sử bàn đặt và nhận nhiều ưu đãi đặc quyền!'
+              : 'View table reservation history and receive exclusive offers!'}
           </Text>
           <TouchableOpacity style={[styles.loginBtn, { backgroundColor: colors.primary }]} onPress={() => router.push('/(auth)/login')}>
             <Text style={styles.loginBtnText}>{language === 'vi' ? 'Đăng nhập ngay' : 'Log In Now'}</Text>
@@ -60,7 +60,6 @@ export default function UserScreen() {
       title: language === 'vi' ? 'Tài khoản & Cá nhân' : 'Account & Personal',
       items: [
         { icon: 'person-outline' as const, title: t('personalInfo'), onPress: () => router.push('/profile/edit') },
-        { icon: 'heart-outline' as const, title: t('favorites'), onPress: () => router.push('/profile/favorites') },
       ]
     },
     {
@@ -77,6 +76,7 @@ export default function UserScreen() {
         { icon: 'notifications-outline' as const, title: t('notifications'), onPress: () => router.push('/profile/notifications') },
         { icon: 'chatbubble-outline' as const, title: t('liveHelp'), onPress: () => router.push('/profile/chat') },
         { icon: 'call-outline' as const, title: language === 'vi' ? 'Liên hệ nhà hàng' : 'Contact Restaurant', onPress: () => router.push('/profile/contact') },
+        { icon: 'document-text-outline' as const, title: language === 'vi' ? 'Quy định & Chính sách' : 'Rules & Policies', onPress: () => router.push('/profile/regulations') },
         { icon: 'settings-outline' as const, title: t('settings'), onPress: () => router.push('/profile/settings') },
       ]
     }

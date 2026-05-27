@@ -32,9 +32,7 @@ export const bookingRateFoodsApi = (bookingId: string) => `/bookings/${bookingId
 export const bookingDishesApi = (bookingId: string) => `/bookings/${bookingId}/dishes`;
 export const tableAvailabilityApi = (branchId: string) => `/branches/${branchId}/tables/availability`;
 
-// ===== Favorites =====
-export const FAVORITES_API = '/favorites';
-export const favoriteByFoodIdApi = (foodId: string) => `/favorites/${foodId}`;
+
 
 // ===== Promotions =====
 export const PROMOTIONS_AVAILABLE_API = '/promotions/available';

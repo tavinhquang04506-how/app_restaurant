@@ -63,19 +63,20 @@ export default function BookingHistoryScreen() {
     const hoursDiff = timeDiffMs / (1000 * 60 * 60);
     const isWithin2Hours = hoursDiff < 2;
 
-    const depositText = formatVnd(booking.depositAmount || 200000);
+    const depositAmt = booking.depositAmount || 200000;
+    const depositText = formatVnd(depositAmt);
 
     const alertTitle = isWithin2Hours
       ? (language === 'vi' ? 'Hủy sát giờ & Mất cọc' : 'Late Cancel & Lose Deposit')
-      : (language === 'vi' ? 'Xác nhận hủy' : 'Confirm Cancel');
+      : (language === 'vi' ? 'Xác nhận hủy đặt bàn' : 'Confirm Cancellation');
 
     const alertMessage = isWithin2Hours
       ? (language === 'vi' 
-          ? `Bạn đang hủy bàn sát giờ (dưới 2 tiếng trước giờ hẹn). Nếu hủy, bạn sẽ MẤT HOÀN TOÀN tiền cọc ${depositText} đã thanh toán theo quy định.\n\nBạn có đồng ý mất tiền cọc để tiếp tục hủy bàn không?`
-          : `You are cancelling less than 2 hours before reservation time. By cancelling, you will LOSE your paid deposit of ${depositText} according to restaurant policy.\n\nDo you agree to forfeit your deposit and cancel?`)
+          ? `Bạn đang hủy bàn sát giờ (dưới 2 tiếng trước giờ hẹn). Theo quy định, bạn sẽ bị MẤT 100% tiền đặt cọc (${depositText}) và không được hoàn trả lại.\n\nBạn có đồng ý tiếp tục hủy bàn không?`
+          : `You are cancelling less than 2 hours before reservation time. According to policy, you will LOSE 100% of your deposit (${depositText}) and no refund will be issued.\n\nDo you agree to proceed with the cancellation?`)
       : (language === 'vi'
-          ? `Bạn đang hủy bàn trước 2 giờ. Bạn sẽ được hoàn lại toàn bộ tiền cọc ${depositText} về tài khoản thanh toán.\n\nBạn có chắc chắn muốn hủy đặt bàn này không?`
-          : `You are cancelling at least 2 hours in advance. Your deposit of ${depositText} will be fully refunded to your payment account.\n\nAre you sure you want to cancel this booking?`);
+          ? `Bạn đang hủy bàn trước 2 giờ. Bạn sẽ được hoàn trả lại toàn bộ 100% tiền đặt cọc (${depositText}) tự động.\n\nBạn có chắc chắn muốn hủy đặt bàn này không?`
+          : `You are cancelling at least 2 hours in advance. Your deposit of ${depositText} will be fully (100%) refunded automatically.\n\nAre you sure you want to cancel this booking?`);
 
     Alert.alert(
       alertTitle,
@@ -83,7 +84,7 @@ export default function BookingHistoryScreen() {
       [
         { text: t('cancel'), style: 'cancel' },
         {
-          text: language === 'vi' ? 'Huỷ đặt' : 'Cancel Booking',
+          text: language === 'vi' ? 'Xác nhận huỷ' : 'Confirm Cancel',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -158,6 +159,17 @@ export default function BookingHistoryScreen() {
           <Text style={[styles.dishCount, { color: colors.primary }]}>
             {item.dishes.length} {language === 'vi' ? 'món ăn đã chọn' : 'dishes selected'} • {formatVnd(item.computedTotal)}
           </Text>
+        )}
+
+        {item.status === 'CANCELLED' && item.depositAmount !== undefined && item.depositAmount > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <Ionicons name="receipt-outline" size={16} color={colors.textSecondary} />
+            <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+              {item.depositRefunded 
+                ? (language === 'vi' ? `Hoàn cọc 100% (${formatVnd(item.depositAmount)})` : `100% Refunded (${formatVnd(item.depositAmount)})`)
+                : (language === 'vi' ? `Không hoàn cọc (${formatVnd(item.depositAmount)}) • Mất 100% cọc` : `No Refund (${formatVnd(item.depositAmount)}) • 100% Fine`)}
+            </Text>
+          </View>
         )}
 
         {(item.status === 'PENDING' || item.status === 'CONFIRMED') && (
@@ -333,14 +345,60 @@ export default function BookingHistoryScreen() {
                     </Text>
                   </View>
                   {selectedBooking.depositAmount !== undefined && selectedBooking.depositAmount > 0 && (
-                    <View style={[styles.summaryRow, { marginTop: 6 }]}>
-                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                        {language === 'vi' ? 'Tiền đặt cọc (đã trả):' : 'Paid Deposit:'}
-                      </Text>
-                      <Text style={[styles.summaryVal, { color: '#27AE60', fontWeight: 'bold' }]}>
-                        {formatVnd(selectedBooking.depositAmount)}
-                      </Text>
-                    </View>
+                    <>
+                      <View style={[styles.summaryRow, { marginTop: 6 }]}>
+                        <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                          {language === 'vi' ? 'Tiền đặt cọc (đã trả):' : 'Paid Deposit:'}
+                        </Text>
+                        <Text style={[styles.summaryVal, { color: '#27AE60', fontWeight: 'bold' }]}>
+                          {formatVnd(selectedBooking.depositAmount)}
+                        </Text>
+                      </View>
+
+                      {selectedBooking.status === 'CANCELLED' && (
+                        <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 10, gap: 8 }}>
+                          {selectedBooking.depositRefunded ? (
+                            <>
+                              <View style={styles.summaryRow}>
+                                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                                  {language === 'vi' ? 'Phí phạt hủy bàn:' : 'Cancellation Fee:'}
+                                </Text>
+                                <Text style={[styles.summaryVal, { color: '#E53935', fontWeight: 'bold' }]}>
+                                  {formatVnd(0)} (0%)
+                                </Text>
+                              </View>
+                              <View style={styles.summaryRow}>
+                                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                                  {language === 'vi' ? 'Tiền cọc hoàn trả:' : 'Refunded Deposit:'}
+                                </Text>
+                                <Text style={[styles.summaryVal, { color: '#27AE60', fontWeight: 'bold' }]}>
+                                  {formatVnd(selectedBooking.depositAmount)} (100%)
+                                </Text>
+                              </View>
+                            </>
+                          ) : (
+                            <>
+                              <View style={styles.summaryRow}>
+                                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                                  {language === 'vi' ? 'Phí phạt hủy (sát giờ 100%):' : 'Late Cancellation Fee (100%):'}
+                                </Text>
+                                <Text style={[styles.summaryVal, { color: '#E53935', fontWeight: 'bold' }]}>
+                                  {formatVnd(selectedBooking.depositAmount)}
+                                </Text>
+                              </View>
+                              <View style={styles.summaryRow}>
+                                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                                  {language === 'vi' ? 'Tiền cọc hoàn trả (0%):' : 'Refunded Deposit (0%):'}
+                                </Text>
+                                <Text style={[styles.summaryVal, { color: '#E53935', fontWeight: 'bold' }]}>
+                                  {formatVnd(0)}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
 

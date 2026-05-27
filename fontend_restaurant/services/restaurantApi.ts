@@ -131,6 +131,7 @@ export interface AvailabilityQuery {
 export interface BookingQuery {
   branchId?: string;
   date?: string;
+  month?: string;
 }
 
 export interface PromotionPayload {
@@ -373,6 +374,7 @@ export const restaurantApi = {
     const searchParams = new URLSearchParams();
     if (params?.branchId) searchParams.append('branchId', params.branchId);
     if (params?.date) searchParams.append('date', params.date);
+    if (params?.month) searchParams.append('month', params.month);
     const query = searchParams.toString();
     return apiRequest<Booking[]>(`/bookings${query ? `?${query}` : ''}`);
   },

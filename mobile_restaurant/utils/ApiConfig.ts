@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
 // Sử dụng IP LAN của máy tính để app trên điện thoại thật có thể gọi được API
-// IP Wi-Fi hiện tại của máy tính là: 192.168.1.199
-const DEFAULT_HOST = '192.168.1.199';
+// Kết nối qua dây cáp USB (adb reverse)
+const DEFAULT_HOST = '127.0.0.1';
 
 export const API_BASE_URL = `http://${DEFAULT_HOST}:8080`;
 export const API_PREFIX = '/api/v1';

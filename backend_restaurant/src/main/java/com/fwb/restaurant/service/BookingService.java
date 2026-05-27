@@ -145,7 +145,7 @@ public class BookingService {
         applyAmounts(booking, subtotal);
 
         Booking saved = bookingRepository.save(booking);
-        this.notificationService.sendBookingSuccess(saved);
+        // Do NOT send notification here. It will be sent via paySuccess endpoint after successful payment.
         return toResponse(saved);
     }
 
@@ -258,6 +258,32 @@ public class BookingService {
         return toResponse(saved);
     }
 
+    @Transactional
+    public BookingResponse paySuccess(String id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking"));
+        
+        // Gửi thông báo đặt bàn thành công sau khi đã thanh toán thành công
+        this.notificationService.sendBookingSuccess(booking);
+        
+        return toResponse(booking);
+    }
+
+    @Transactional
+    public void delete(String id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking"));
+        
+        // Giải phóng bàn ăn về trạng thái AVAILABLE
+        RestaurantTable table = booking.getTable();
+        if (table != null) {
+            table.setStatus(com.fwb.restaurant.utils.enums.TableStatus.AVAILABLE);
+            tableRepository.save(table);
+        }
+        
+        bookingRepository.delete(booking);
+    }
+
     public List<TableAvailabilityResponse> getAvailability(String branchId, LocalDateTime start, int guests, int durationMinutes) {
         LocalDateTime end = start.plusMinutes(durationMinutes);
         branchRepository.findById(branchId)
@@ -291,10 +317,22 @@ public class BookingService {
                 .toList();
     }
 
-    public List<BookingResponse> getBookings(String branchId, LocalDate date) {
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-        LocalDateTime start = targetDate.atStartOfDay();
-        LocalDateTime end = start.plusDays(1);
+    public List<BookingResponse> getBookings(String branchId, LocalDate date, String month) {
+        LocalDateTime start;
+        LocalDateTime end;
+
+        if (month != null && !month.isEmpty()) {
+            // month is in YYYY-MM format
+            String[] parts = month.split("-");
+            int year = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]);
+            start = LocalDate.of(year, m, 1).atStartOfDay();
+            end = start.plusMonths(1);
+        } else {
+            LocalDate targetDate = date != null ? date : LocalDate.now();
+            start = targetDate.atStartOfDay();
+            end = start.plusDays(1);
+        }
 
         User currentUser = getCurrentUser();
         String effectiveBranchId = branchId;

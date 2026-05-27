@@ -75,17 +75,3 @@ export function parseFoodPageResponse(json: any): FoodPageResponse {
   };
 }
 
-// ==================== FavoriteFoodListResponse ====================
-export interface FavoriteFoodListResponse extends BaseResponse {
-  data: FoodModel[];
-}
-
-export function parseFavoriteFoodListResponse(json: any): FavoriteFoodListResponse {
-  const base = parseBaseResponse(json);
-  const raw = json.data;
-  const list = Array.isArray(raw) ? raw : [];
-  return {
-    ...base,
-    data: list.map(parseFoodModel),
-  };
-}

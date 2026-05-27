@@ -11,5 +11,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, String
     List<ChatMessage> findByConversationOrderByCreatedAtAsc(ChatConversation conversation);
 
     void deleteByCreatedAtBefore(Instant threshold);
-}
 
+    void deleteByConversation(ChatConversation conversation);
+}

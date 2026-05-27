@@ -130,7 +130,6 @@ export default function HomeScreen() {
   const [promoImageErrors, setPromoImageErrors] = useState<string[]>([]);
   
   // Extra states
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const addItem = useCartStore((s) => s.addItem);
@@ -148,10 +147,6 @@ export default function HomeScreen() {
       setBranches(branchRes.data);
 
       if (isLoggedIn) {
-        // Load favorites
-        const favs = await Api.getFavorites().catch(() => ({ data: [] }));
-        setFavoriteIds(favs.data.map((f: any) => f.id));
-
         // Load notifications unread count (fetch 50 items to align with notification page)
         const notifs = await Api.getMyNotifications(1, 50).catch(() => ({ data: [] }));
         let rawNotifs = notifs.data || [];
@@ -172,7 +167,6 @@ export default function HomeScreen() {
 
         setUnreadCount(rawNotifs.filter((n: any) => !n.isRead).length);
       } else {
-        setFavoriteIds([]);
         setUnreadCount(0);
       }
     } catch {}
@@ -229,38 +223,7 @@ export default function HomeScreen() {
     Alert.alert('Thành công', `Đã thêm món "${food.name}" vào giỏ hàng!`);
   };
 
-  const handleToggleFavorite = async (foodId: string, willBeFavorite: boolean) => {
-    if (!isLoggedIn) {
-      Alert.alert(
-        'Yêu cầu đăng nhập',
-        'Vui lòng đăng nhập để thêm món ăn vào danh sách yêu thích.',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          { text: 'Đăng nhập', onPress: () => router.push('/(auth)/login') }
-        ]
-      );
-      return;
-    }
 
-    // Optimistic Update
-    setFavoriteIds((prev) =>
-      willBeFavorite ? [...prev, foodId] : prev.filter((id) => id !== foodId)
-    );
-
-    try {
-      if (willBeFavorite) {
-        await Api.addFavorite(foodId);
-      } else {
-        await Api.removeFavorite(foodId);
-      }
-    } catch (err: any) {
-      // Revert on failure
-      setFavoriteIds((prev) =>
-        willBeFavorite ? prev.filter((id) => id !== foodId) : [...prev, foodId]
-      );
-      Alert.alert('Thông báo', err.message || 'Không thể cập nhật danh sách yêu thích.');
-    }
-  };
 
   const handleSavePromoCode = async (code: string) => {
     if (!isLoggedIn) {
@@ -404,7 +367,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           {foods.map((food) => {
-            const isFav = favoriteIds.includes(food.id);
             const soldCount = (food.ratingCount ?? 0) * 3 + 2;
             const isBestSeller = soldCount >= 10 || (food.avgRating != null && food.avgRating >= 4.5);
             return (
@@ -439,9 +401,6 @@ export default function HomeScreen() {
                     )}
                   </View>
                 </View>
-                <TouchableOpacity style={styles.heartBtn} onPress={() => handleToggleFavorite(food.id, !isFav)}>
-                  <Ionicons name={isFav ? "heart" : "heart-outline"} size={22} color={colors.primary} />
-                </TouchableOpacity>
               </TouchableOpacity>
             );
           })}
@@ -456,8 +415,6 @@ export default function HomeScreen() {
         food={selectedFoodDetail}
         onClose={() => setSelectedFoodDetail(null)}
         isLoggedIn={isLoggedIn}
-        favoriteIds={favoriteIds}
-        onToggleFavorite={handleToggleFavorite}
         onAddToCart={handleAddToCart}
       />
 

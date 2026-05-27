@@ -27,6 +27,9 @@ export default function NotificationsScreen() {
 
   const loadNotifications = useCallback(async () => {
     try {
+      // TỰ ĐỘNG RESET: Xóa danh sách ID đã đọc cục bộ để đưa toàn bộ về "Chưa xem"
+      await AsyncStorage.removeItem('@read_notification_ids');
+
       let rawData: NotificationModel[] = [];
       if (isLoggedIn) {
         const res = await Api.getMyNotifications(1, 50);
@@ -136,8 +139,9 @@ export default function NotificationsScreen() {
           style={styles.notifImage}
           resizeMode="cover"
           onError={() => {
-            if (item.id) {
-              setImageErrorIds((prev) => [...prev, item.id]);
+            const notifId = item.id;
+            if (notifId) {
+              setImageErrorIds((prev) => [...prev, notifId]);
             }
           }}
         />
@@ -247,8 +251,9 @@ export default function NotificationsScreen() {
                     style={styles.modalImage}
                     resizeMode="cover"
                     onError={() => {
-                      if (selectedNotification.id) {
-                        setImageErrorIds((prev) => [...prev, selectedNotification.id]);
+                      const modalNotifId = selectedNotification.id;
+                      if (modalNotifId) {
+                        setImageErrorIds((prev) => [...prev, modalNotifId]);
                       }
                     }}
                   />

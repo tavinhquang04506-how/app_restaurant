@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
   BarChart,
   Bar,
@@ -85,6 +86,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
   const [branchHighlights, setBranchHighlights] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [monthlyBookings, setMonthlyBookings] = useState<any[]>([]);
 
   // New chart states
   const [chartTitle, setChartTitle] = useState('Quy mô bàn ăn của các chi nhánh (bàn)');
@@ -156,23 +158,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
         } else {
           const d = new Date();
           const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const currentMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           
           const [usersRes, branchesRes, foodsRes, categoriesRes, bookingsRes] = await Promise.all([
             restaurantApi.getUsers({ page: 1, size: 5 }),
             restaurantApi.getBranches(),
             restaurantApi.getFoods({ page: 1, size: 6 }),
             restaurantApi.getCategories(),
-            restaurantApi.getBookings({ date: localDateStr }).catch(() => []),
+            restaurantApi.getBookings({ month: currentMonthStr }).catch(() => []),
           ]);
 
-          // Calculate business BI metrics
+          // Calculate business BI metrics for TODAY
           const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : [];
-          const completedBookings = bookingsList.filter((b: any) => b.status === 'COMPLETED');
-          const todayRevenue = completedBookings.reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0);
-          const activeGuests = bookingsList.filter((b: any) => b.status === 'CHECKED_IN').reduce((sum: number, b: any) => sum + (b.guests || 0), 0);
+          const todayBookingsList = bookingsList.filter((b: any) => {
+            if (!b.reservedFrom) return false;
+            return b.reservedFrom.startsWith(localDateStr);
+          });
+
+          const completedTodayBookings = todayBookingsList.filter((b: any) => b.status === 'COMPLETED');
+          const todayRevenue = completedTodayBookings.reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0);
+          const activeGuests = todayBookingsList.filter((b: any) => b.status === 'CHECKED_IN').reduce((sum: number, b: any) => sum + (b.guests || 0), 0);
           
-          const nonCancelledCount = bookingsList.filter((b: any) => b.status !== 'CANCELLED').length;
-          const completedCount = completedBookings.length;
+          const nonCancelledCount = todayBookingsList.filter((b: any) => b.status !== 'CANCELLED').length;
+          const completedCount = completedTodayBookings.length;
           const completionRate = nonCancelledCount > 0 ? Math.round((completedCount / nonCancelledCount) * 100) : 100;
 
           setStats({
@@ -182,11 +190,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
             categories: categoriesRes.length,
             revenue: todayRevenue,
             activeGuests,
-            todayBookings: bookingsList.length,
+            todayBookings: todayBookingsList.length,
             completionRate,
           });
 
-          // Build status counts for Pie Chart
+          // Build status counts for Pie Chart (Today)
           const statusCounts = {
             CHECKED_IN: 0,
             CONFIRMED: 0,
@@ -194,7 +202,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
             COMPLETED: 0,
             CANCELLED: 0,
           };
-          bookingsList.forEach((b: any) => {
+          todayBookingsList.forEach((b: any) => {
             if (statusCounts[b.status as keyof typeof statusCounts] !== undefined) {
               statusCounts[b.status as keyof typeof statusCounts]++;
             }
@@ -211,8 +219,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
           setTopFoods(foodsRes.result);
           setBranches(branchesRes);
           setBranchHighlights(branchesRes.slice(0, 4));
+          setMonthlyBookings(bookingsList);
 
-          // Calculate revenue for each branch from today's bookings
+          // Calculate revenue for each branch from MONTHLY bookings
           const branchRevenueMap: Record<string, number> = {};
           branchesRes.forEach((b: Branch) => {
             branchRevenueMap[b.id] = 0;
@@ -231,7 +240,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
 
           setChartData(branchRevenueData);
           setChartKey('Doanh thu');
-          setChartTitle('Doanh thu trong ngày của các chi nhánh (VND)');
+          setChartTitle(`Doanh thu tháng ${d.getMonth() + 1} của các chi nhánh (VND)`);
           setUnit('đ');
         }
       } catch (err) {
@@ -257,6 +266,101 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
     return () => clearInterval(interval);
   }, [isStaff, isManager, branchId]);
 
+  const exportRevenueToExcel = () => {
+    try {
+      if (!monthlyBookings || monthlyBookings.length === 0) {
+        alert("Không có dữ liệu đơn đặt bàn trong tháng này để xuất báo cáo.");
+        return;
+      }
+      
+      const d = new Date();
+      const currentMonth = d.getMonth() + 1;
+      const currentYear = d.getFullYear();
+      
+      // Định nghĩa các tiêu đề cột cho Excel
+      const headers = [
+        "Mã Đặt Bàn",
+        "Chi Nhánh",
+        "Khách Hàng",
+        "Email",
+        "Số Điện Thoại",
+        "Bàn Ăn",
+        "Số Khách",
+        "Thời Gian Đặt Bàn",
+        "Trạng Thái Lịch Hẹn",
+        "Tiền Cọc (VND)",
+        "Doanh Thu Thực Tế (VND)",
+        "Yêu Cầu Đặc Biệt",
+        "Thời Gian Tạo Đơn"
+      ];
+      
+      // Chuyển đổi dữ liệu đơn đặt bàn thành dạng mảng 2 chiều
+      const dataRows = monthlyBookings.map((bk: any) => {
+        const bookingId = bk.id ? `#${bk.id.substring(0, 8).toUpperCase()}` : "—";
+        const branchName = bk.branch?.name || "—";
+        const customerName = bk.user?.username || "—";
+        const email = bk.user?.email || "—";
+        const phone = bk.user?.phone || "—";
+        const tableCode = formatTableCode(bk.table?.tableCode) || "—";
+        const guests = bk.guests || 0;
+        const reservedTime = bk.reservedFrom ? bk.reservedFrom.replace("T", " ") : "—";
+        
+        let statusText = bk.status;
+        if (bk.status === 'COMPLETED') statusText = 'Đã hoàn thành';
+        else if (bk.status === 'CANCELLED') statusText = 'Đã hủy';
+        else if (bk.status === 'CHECKED_IN') statusText = 'Đang dùng bữa';
+        else if (bk.status === 'CONFIRMED') statusText = 'Đã xác nhận';
+        else if (bk.status === 'PENDING') statusText = 'Chờ xử lý';
+        
+        const deposit = bk.depositAmount || 0;
+        const revenue = bk.status === 'COMPLETED' ? (bk.totalAmount || 0) : 0;
+        const specialRequest = bk.specialRequest || "—";
+        const createdAt = bk.createdAt ? bk.createdAt.replace("T", " ").substring(0, 19) : "—";
+
+        return [
+          bookingId,
+          branchName,
+          customerName,
+          email,
+          phone,
+          tableCode,
+          guests,
+          reservedTime,
+          statusText,
+          deposit,
+          revenue,
+          specialRequest,
+          createdAt
+        ];
+      });
+      
+      // Tạo Worksheet từ dữ liệu mảng
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+      
+      // Định dạng độ rộng cột (Auto-fit column widths) để giao diện Excel đẹp mắt hơn
+      const colWidths = headers.map((h, i) => {
+        let maxLen = h.length;
+        dataRows.forEach(row => {
+          const val = String(row[i] || '');
+          if (val.length > maxLen) maxLen = val.length;
+        });
+        // Cộng thêm 3 ký tự đệm để tránh hiện tượng chữ bị che khuất
+        return { wch: Math.min(maxLen + 3, 35) }; 
+      });
+      worksheet['!cols'] = colWidths;
+      
+      // Tạo Workbook và đưa Worksheet vào
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Doanh Thu");
+      
+      // Xuất và tải xuống tệp dạng binary .xlsx chuẩn
+      XLSX.writeFile(workbook, `Bao_Cao_Chi_Tiet_Doanh_Thu_Thang_${currentMonth}_${currentYear}.xlsx`);
+    } catch (e) {
+      console.error("Lỗi khi xuất dữ liệu doanh thu XLSX:", e);
+      alert("Đã xảy ra lỗi khi tạo tệp báo cáo Excel dạng .xlsx.");
+    }
+  };
+
   if (isStaff) {
     return <StaffDashboard />;
   }
@@ -274,6 +378,28 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
             {error}
           </p>
         </Card>
+      )}
+
+      {/* Excel Export Toolbar for Admin */}
+      {!isManager && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 bg-white border border-slate-100 p-5 rounded-2xl shadow-sm hover:shadow-[0_8px_30px_rgba(99,102,241,0.03)] transition-all duration-300 gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Báo cáo tài chính & Xuất dữ liệu
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Hệ thống hỗ trợ trích xuất toàn bộ lịch đặt bàn, chi tiết tiền cọc và doanh thu các chi nhánh trong tháng hiện tại ra file Excel.</p>
+          </div>
+          <Button 
+            onClick={exportRevenueToExcel}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Xuất Excel doanh thu chi tiết
+          </Button>
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -325,7 +451,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
             ) : (
               <div style={{ width: '100%', height: 320 }} className="pt-4 pr-2">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <BarChart data={chartData} margin={{ top: 10, right: 0, left: -15, bottom: 5 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 0, left: 5, bottom: 5 }}>
                     <defs>
                       <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#6366F1" stopOpacity={1} />
@@ -345,6 +471,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ forceStaffView }) => {
                       axisLine={false} 
                       tick={{ fill: '#64748B', fontSize: 10, fontWeight: 500 }}
                       dx={-4}
+                      tickFormatter={(value: number) => {
+                        if (value >= 1000000) return `${(value / 1000000).toFixed(0)}tr`;
+                        if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                        return value.toString();
+                      }}
                     />
                     <Tooltip content={<CustomTooltip unit={unit} />} cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }} />
                     <Bar dataKey={chartKey} fill="url(#barGradient)" radius={[6, 6, 0, 0]} barSize={60} />

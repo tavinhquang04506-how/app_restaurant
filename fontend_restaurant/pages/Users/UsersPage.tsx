@@ -256,7 +256,10 @@ const UsersPage: React.FC = () => {
     },
     {
       header: 'Chi nhánh',
-      accessor: (user: User) => user.branchName || '—',
+      accessor: (user: User) => {
+        if (user.role?.name?.toUpperCase() === 'ADMIN') return '—';
+        return user.branchName || '—';
+      },
     },
     {
       header: 'Hành động',

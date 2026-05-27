@@ -99,6 +99,8 @@ export default function CartScreen() {
     }
   };
 
+
+
   const moveItem = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= orderedItems.length) return;

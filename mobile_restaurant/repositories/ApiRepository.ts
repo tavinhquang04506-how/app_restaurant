@@ -7,7 +7,7 @@ import {
 } from '../models/AuthModels';
 import { parseBranchListResponse, parseBranchFoodPageResponse, type BranchListResponse, type BranchFoodPageResponse } from '../models/BranchModels';
 import { parseCategoryListResponse, type CategoryListResponse } from '../models/CategoryModels';
-import { parseFoodPageResponse, parseFavoriteFoodListResponse, type FoodPageResponse, type FavoriteFoodListResponse } from '../models/FoodModels';
+import { parseFoodPageResponse, type FoodPageResponse } from '../models/FoodModels';
 import {
   parseBookingResponseWrapper, parseBookingListResponse, parseTableAvailabilityListResponse,
   type BookingResponseWrapper, type BookingListResponse, type BookingRequestPayload, type TableAvailabilityListResponse,
@@ -132,29 +132,7 @@ export async function getBranchFoods(opts: {
   return res;
 }
 
-// ===== Favorites =====
-export async function getFavorites(): Promise<FavoriteFoodListResponse> {
-  const json = await getJson(U.FAVORITES_API);
-  const res = parseFavoriteFoodListResponse(json);
-  if (!res.status) throw new Error(res.message);
-  return res;
-}
 
-export async function addFavorite(foodId: string): Promise<void> {
-  const json = await postJson(U.FAVORITES_API, { body: { foodId } });
-  const statusCode = json && json.statusCode !== undefined ? Number(json.statusCode) : 201;
-  if (statusCode < 200 || statusCode >= 300) {
-    throw new Error(json?.message || 'Không thể thêm yêu thích');
-  }
-}
-
-export async function removeFavorite(foodId: string): Promise<void> {
-  const json = await deleteJson(U.favoriteByFoodIdApi(foodId));
-  const statusCode = json && json.statusCode !== undefined ? Number(json.statusCode) : 204;
-  if (statusCode < 200 || statusCode >= 300) {
-    throw new Error(json?.message || 'Không thể xoá yêu thích');
-  }
-}
 
 // ===== Bookings =====
 export async function createBooking(payload: BookingRequestPayload): Promise<BookingResponseWrapper> {
@@ -166,6 +144,21 @@ export async function createBooking(payload: BookingRequestPayload): Promise<Boo
 
 export async function cancelBooking(bookingId: string): Promise<BookingResponseWrapper> {
   const json = await postJson(U.bookingCancelApi(bookingId));
+  const res = parseBookingResponseWrapper(json);
+  if (!res.status) throw new Error(res.message);
+  return res;
+}
+
+export async function deleteBooking(bookingId: string): Promise<void> {
+  const json = await deleteJson(`${U.BOOKINGS_API}/${bookingId}`);
+  const statusCode = json && json.statusCode !== undefined ? Number(json.statusCode) : 200;
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(json?.message || 'Không thể xóa đặt bàn');
+  }
+}
+
+export async function confirmPaySuccess(bookingId: string): Promise<BookingResponseWrapper> {
+  const json = await postJson(`${U.BOOKINGS_API}/${bookingId}/pay-success`);
   const res = parseBookingResponseWrapper(json);
   if (!res.status) throw new Error(res.message);
   return res;

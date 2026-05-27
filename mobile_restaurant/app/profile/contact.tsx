@@ -26,7 +26,7 @@ export default function ContactScreen() {
           setBranches(res.data);
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -38,7 +38,7 @@ export default function ContactScreen() {
   ];
 
   const handlePress = (action: string) => {
-    if (action) Linking.openURL(action).catch(() => {});
+    if (action) Linking.openURL(action).catch(() => { });
   };
 
   return (
@@ -156,7 +156,7 @@ export default function ContactScreen() {
                   <Text style={[styles.branchDetailName, { color: colors.text }]}>
                     {translateDbText(selectedBranchDetail.name)}
                   </Text>
-                  
+
                   {/* Status badge: Opening hours */}
                   <View style={styles.branchDetailBadges}>
                     <View style={[styles.branchDetailBadge, { backgroundColor: isDarkMode ? '#2C2C2E' : '#FFF3E0' }]}>
@@ -174,15 +174,15 @@ export default function ContactScreen() {
                   {/* Intro/Description */}
                   <Text style={[styles.modalSectionLabel, { color: colors.text }]}>{t('branchIntro')}</Text>
                   <Text style={[styles.modalFoodDesc, { color: colors.textSecondary }]}>
-                    {language === 'vi' 
-                      ? `Chào mừng bạn đến với ${translateDbText(selectedBranchDetail.name)}. Chi nhánh của chúng tôi sở hữu không gian ẩm thực sang trọng, ấm cúng cùng đội ngũ đầu bếp chuyên nghiệp hàng đầu, mang lại trải nghiệm ẩm thực trọn vẹn nhất cho quý khách.` 
+                    {language === 'vi'
+                      ? `Chào mừng bạn đến với ${translateDbText(selectedBranchDetail.name)}. Chi nhánh của chúng tôi sở hữu không gian ẩm thực sang trọng, ấm cúng cùng đội ngũ đầu bếp chuyên nghiệp hàng đầu, mang lại trải nghiệm ẩm thực trọn vẹn nhất cho quý khách.`
                       : `Welcome to ${translateDbText(selectedBranchDetail.name)}. Our branch features a luxurious, cozy dining space and a team of top professional chefs, bringing the most complete culinary experience to our guests.`}
                   </Text>
 
                   {/* Phone & Address */}
                   <View style={[styles.detailContactSection, { backgroundColor: isDarkMode ? '#121212' : '#F9F5F4' }]}>
                     <Text style={[styles.modalSectionLabel, { color: colors.text }]}>{t('contactInfo')}</Text>
-                    
+
                     {/* Address Line */}
                     <View style={styles.contactItemRow}>
                       <Ionicons name="location" size={20} color={colors.primary} style={styles.contactItemIcon} />

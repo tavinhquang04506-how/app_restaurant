@@ -112,6 +112,7 @@ export interface BookingResponseModel {
   computedTotal: number;
   rated: boolean;
   depositAmount?: number;
+  depositRefunded?: boolean;
 }
 
 export function parseBookingResponseModel(json: any): BookingResponseModel {
@@ -120,6 +121,7 @@ export function parseBookingResponseModel(json: any): BookingResponseModel {
   const discountAmount = json.discountAmount != null ? Number(json.discountAmount) : undefined;
   const totalAmount = json.totalAmount != null ? Number(json.totalAmount) : undefined;
   const depositAmount = json.depositAmount != null ? Number(json.depositAmount) : undefined;
+  const depositRefunded = json.depositRefunded !== undefined ? !!json.depositRefunded : undefined;
 
   const computedSubtotal = subtotalAmount ?? dishes.reduce((sum, d) => sum + d.totalPrice, 0);
   const computedDiscount = discountAmount ?? 0;
@@ -138,6 +140,7 @@ export function parseBookingResponseModel(json: any): BookingResponseModel {
     discountAmount,
     totalAmount,
     depositAmount,
+    depositRefunded,
     promotion: json.promotion ? parsePromotionModel(json.promotion) : undefined,
     dishes,
     branchName: json.branch?.name ?? '',

@@ -183,6 +183,15 @@ public class ChatService {
         }
 
         ChatSenderType senderType = fromAdmin ? ChatSenderType.ADMIN : ChatSenderType.USER;
+
+        // If user starts a new chat on a previously CLOSED conversation,
+        // delete all old messages to start fresh
+        if (!fromAdmin && (conversation.getStatus() == ConversationStatus.CLOSED || conversation.getStatus() == null)) {
+            chatMessageRepository.deleteByConversation(conversation);
+            conversation.setStatus(ConversationStatus.WAITING);
+            conversation.setAssignedStaff(null);
+        }
+
         ChatMessage message = new ChatMessage();
         message.setConversation(conversation);
         message.setSenderType(senderType);
@@ -193,13 +202,6 @@ public class ChatService {
         ChatMessage saved = chatMessageRepository.save(message);
         conversation.setLastMessageAt(Instant.now());
         conversation.setLastMessagePreview(trimPreview(saved.getContent()));
-        
-        if (!fromAdmin) {
-            if (conversation.getStatus() == ConversationStatus.CLOSED || conversation.getStatus() == null) {
-                conversation.setStatus(ConversationStatus.WAITING);
-                conversation.setAssignedStaff(null);
-            }
-        }
         
         conversationRepository.save(conversation);
 

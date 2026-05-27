@@ -7,7 +7,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
@@ -18,15 +18,17 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={onClose}>
       <div
-        className={`bg-white rounded-xl shadow-2xl flex flex-col ${sizeClasses[size]} w-full m-4`}
+        className={`bg-white rounded-xl shadow-2xl flex flex-col ${sizeClasses[size]} w-full m-4 max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-xl font-semibold">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,11 +36,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
             </svg>
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">
           {children}
         </div>
         {footer && (
-          <div className="flex justify-end p-4 border-t bg-gray-50 rounded-b-xl">
+          <div className="flex justify-end p-4 border-t bg-gray-50 rounded-b-xl shrink-0">
             {footer}
           </div>
         )}

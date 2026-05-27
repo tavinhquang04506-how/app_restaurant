@@ -76,8 +76,23 @@ export default function ChatScreen() {
             const res = await Api.getMyConversation();
             if (res.data) {
               const conv = res.data;
-              setConversationId(conv.id);
               const backendMsgs = conv.messages || [];
+
+              // If the conversation is CLOSED, treat as fresh start
+              if (conv.status === 'CLOSED') {
+                console.log('Previous conversation was CLOSED, starting fresh.');
+                setConversationId(null);
+                setMessages(getInitialMessages());
+                setIsAgentConnected(false);
+                setIsChatEnded(false);
+                setEndSessionTime(null);
+                setIsWaitingForAgent(false);
+                await AsyncStorage.removeItem(STORAGE_KEY);
+                setLoading(false);
+                return;
+              }
+
+              setConversationId(conv.id);
               
               if (backendMsgs.length > 0) {
                 // If we already have backend messages, map them
@@ -111,10 +126,16 @@ export default function ChatScreen() {
         const data = await AsyncStorage.getItem(STORAGE_KEY);
         if (data) {
           const parsed = JSON.parse(data);
-          setMessages(parsed.messages || getInitialMessages());
-          setIsAgentConnected(parsed.isAgentConnected || false);
-          setIsChatEnded(parsed.isChatEnded || false);
-          setEndSessionTime(parsed.endSessionTime || null);
+          // If chat ended locally, start fresh instead of showing dead state
+          if (parsed.isChatEnded) {
+            setMessages(getInitialMessages());
+            await AsyncStorage.removeItem(STORAGE_KEY);
+          } else {
+            setMessages(parsed.messages || getInitialMessages());
+            setIsAgentConnected(parsed.isAgentConnected || false);
+            setIsChatEnded(false);
+            setEndSessionTime(null);
+          }
         } else {
           setMessages(getInitialMessages());
         }
@@ -170,6 +191,15 @@ export default function ChatScreen() {
   }, [isChatEnded, endSessionTime]);
 
   const handleResetChat = async () => {
+    // Close old conversation on backend if it exists and is not already closed
+    if (conversationId) {
+      try {
+        await Api.closeMyConversation(conversationId);
+      } catch (err) {
+        console.log('Error closing old conversation during reset:', err);
+      }
+    }
+
     const freshMsgs = getInitialMessages();
     setMessages(freshMsgs);
     setIsAgentConnected(false);
